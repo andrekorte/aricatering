@@ -1,0 +1,19 @@
+{
+  "_comment": "Single source of truth for the business name, domain and contact details. Change these with tools/rebrand.py (it rewrites every HTML file too), then re-run tools/build.py.",
+  "business_name": "Ari Thai Catering",
+  "short_name": "Ari Thai",
+  "domain": "ari-thaicatering.com.au",
+  "phone": "+61 452 643 155",
+  "phone_href": "+61452643155",
+  "email": "arithaistreetfood@gmail.com",
+  "address": "6/158 Adelaide St, Brisbane City QLD 4000",
+  "form_endpoint": "https://formsubmit.co/arithaistreetfood@gmail.com",
+  "copyright_year": 2026,
+  "_placeholders": [
+    "business_name / short_name / domain - not final, see README",
+    "email - currently the restaurant inbox; consider a dedicated catering address",
+    "form_endpoint - FormSubmit requires one-time activation of the target inbox",
+    "package prices and add-on prices in tools/build.py - benchmarked, not confirmed",
+    "deposit, cancellation and payment terms in /terms-conditions/ - draft for review"
+  ]
+}
