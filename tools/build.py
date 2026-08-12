@@ -374,6 +374,27 @@ def package_cards(cta="/enquiry/", cta_label="Get a quote"):
 MENU = json.load(open(os.path.join(ROOT, "assets", "menu-data.json")))
 BY_SLUG = {c["slug"]: c for c in MENU["categories"]}
 
+GALLERY = json.load(open(os.path.join(ROOT, "assets", "gallery-data.json")))
+
+
+def gallery_section():
+    tiles = "\n".join(
+        '      <li class="gallery__item"><img src="/assets/img/gallery/%s" alt="Ari rice bowl, cooked to order and ready for delivery" '
+        'width="%d" height="%d" loading="lazy" decoding="async"></li>'
+        % (g["file"], g["w"], g["h"]) for g in GALLERY)
+    return """<section class="section section--cream">
+  <div class="container">
+    <div class="section-head section-head--center">
+      <span class="eyebrow">Signature rice bowls</span>
+      <h2>This is what shows up at your desk</h2>
+      <p class="lede" style="margin-inline:auto">Cooked to order in our Adelaide St kitchen, not held under a heat lamp. A few of the bowls that go out the door every day.</p>
+    </div>
+    <ul class="gallery">
+%s
+    </ul>
+  </div>
+</section>""" % tiles
+
 # Which restaurant categories become catering menu sections, and how they are
 # framed for a corporate buyer. Retail prices are deliberately not shown:
 # catering is sold per person, by package.
@@ -569,11 +590,14 @@ def build_home():
   </div>
 </section>
 
+{GALLERY}
+
 {REVIEWS}
 
 {CTA}""" \
         .replace("{CARDS}", cards) \
         .replace("{PACKAGES}", package_cards()) \
+        .replace("{GALLERY}", gallery_section()) \
         .replace("{REVIEWS}", reviews_block()) \
         .replace("{CTA}", CTA_BAND) \
         .replace("{DIET}", ticks([
