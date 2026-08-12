@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://arithaicatering.com.au/sitemap.xml
+Sitemap: https://ari-thaicatering.com.au/sitemap.xml

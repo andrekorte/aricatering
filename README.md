@@ -89,7 +89,7 @@ enquiry form.
 Things that need a real decision, roughly in order of importance:
 
 1. **Business name and domain.** Currently `Ari Thai Catering` /
-   `arithaicatering.com.au`. Nothing is registered yet.
+   `ari-thaicatering.com.au`. Nothing is registered yet.
 2. **Package prices.** `$24 / $34 / $46` per person and the add-on prices in
    `tools/build.py` are benchmarked against Brisbane caterers (Thai catering
    starts around $20pp; corporate buffets run $25–47pp) — they are **not**
@@ -100,7 +100,7 @@ Things that need a real decision, roughly in order of importance:
    enquiry and click the activation email. Consider a dedicated
    `catering@` address instead of the restaurant inbox.
 4. **`_next` redirect.** The form redirects to
-   `https://arithaicatering.com.au/enquiry/thank-you/`. That URL has to be the
+   `https://ari-thaicatering.com.au/enquiry/thank-you/`. That URL has to be the
    real domain or the redirect breaks — `tools/rebrand.py --domain` fixes it.
 5. **Legal pages.** Both are drafts written to match how the site actually
    behaves. Read them against your real trading terms and get them checked.
