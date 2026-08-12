@@ -157,12 +157,12 @@ a  { color: inherit; }
 .nav .btn { display: none; }
 
 .header-cta { display: flex; align-items: center; gap: 0.6rem; }
-.header-phone {
+.header-contact {
   display: inline-flex; align-items: center; gap: 0.45rem;
   color: #fff; text-decoration: none; font-weight: 700; font-size: 0.95rem; white-space: nowrap;
 }
-.header-phone:hover { color: var(--yellow); }
-.header-phone svg { flex: none; }
+.header-contact:hover { color: var(--yellow); }
+.header-contact svg { flex: none; }
 
 .nav-toggle {
   display: none;
@@ -188,8 +188,10 @@ a  { color: inherit; }
   .nav a { padding: 0.9rem 0.25rem; border-bottom: 1px solid var(--line-d); border-radius: 0; font-size: 1.05rem; }
   .nav .btn { display: inline-flex; margin-top: 1rem; border-bottom: none; text-align: center; }
 }
+@media (max-width: 720px) {
+  .header-contact span { display: none; }
+}
 @media (max-width: 560px) {
-  .header-phone span { display: none; }
   .brand img { width: 40px; height: 40px; }
   .brand__name { font-size: 1rem; }
 }

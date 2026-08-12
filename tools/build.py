@@ -88,7 +88,7 @@ def header(active):
       <a class="btn btn--primary btn--sm" href="/enquiry/">Get a quote</a>
     </nav>
     <div class="header-cta">
-      <a class="header-phone" href="tel:{PHONE_HREF}">{PHONE_ICON}<span>{PHONE}</span></a>
+      <a class="header-contact" href="mailto:{EMAIL}">{MAIL_ICON}<span>{EMAIL}</span></a>
       <a class="btn btn--primary btn--sm" href="/enquiry/">Get a quote</a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Menu">
         <svg class="icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -98,9 +98,8 @@ def header(active):
   </div>
 </header>""".replace("{LINKS}", "\n      ".join(links)) \
              .replace("{SHORT}", SHORT) \
-             .replace("{PHONE_ICON}", ICON["phone"]) \
-             .replace("{PHONE_HREF}", PHONE_HREF) \
-             .replace("{PHONE}", PHONE)
+             .replace("{MAIL_ICON}", ICON["mail"]) \
+             .replace("{EMAIL}", EMAIL)
 
 
 FOOTER = """<footer class="site-footer">
@@ -155,7 +154,7 @@ FOOTER = """<footer class="site-footer">
 </footer>
 
 <div class="mobile-cta">
-  <a class="btn btn--ghost" href="tel:{PHONE_HREF}">Call us</a>
+  <a class="btn btn--ghost" href="mailto:{EMAIL}">Email us</a>
   <a class="btn btn--primary" href="/enquiry/">Get a quote</a>
 </div>
 
