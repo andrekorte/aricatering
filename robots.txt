@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://arithaicatering.com.au/sitemap.xml
