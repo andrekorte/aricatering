@@ -77,7 +77,7 @@ def header(active):
 <header class="site-header">
   <div class="container site-header__inner">
     <a class="brand" href="/">
-      <img src="/assets/img/brand/ari-logo.png" alt="" width="46" height="46">
+      <img src="/assets/img/brand/ari-logo.png" alt="" width="60" height="60">
       <span class="brand__text">
         <span class="brand__name">{SHORT}</span>
         <span class="brand__tag">Catering &middot; Brisbane</span>
@@ -88,7 +88,6 @@ def header(active):
       <a class="btn btn--primary btn--sm" href="/enquiry/">Get a quote</a>
     </nav>
     <div class="header-cta">
-      <a class="header-contact" href="mailto:{EMAIL}">{MAIL_ICON}<span>{EMAIL}</span></a>
       <a class="btn btn--primary btn--sm" href="/enquiry/">Get a quote</a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Menu">
         <svg class="icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -97,9 +96,7 @@ def header(active):
     </div>
   </div>
 </header>""".replace("{LINKS}", "\n      ".join(links)) \
-             .replace("{SHORT}", SHORT) \
-             .replace("{MAIL_ICON}", ICON["mail"]) \
-             .replace("{EMAIL}", EMAIL)
+             .replace("{SHORT}", SHORT)
 
 
 FOOTER = """<footer class="site-footer">
@@ -205,7 +202,7 @@ def page(path, title, description, body, active, og_image="/assets/img/brand/pad
 <meta property="og:url" content="{CANON}">
 <meta property="og:image" content="https://{DOMAIN}{OG}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#05070b">
+<meta name="theme-color" content="#292a2f">
 <link rel="icon" href="/assets/img/brand/ari-logo.png">
 <link rel="apple-touch-icon" href="/assets/img/brand/ari-logo.png">
 <link rel="preload" href="/assets/fonts/roboto-kfo7cnqeu92fr1me7ksn66agldtyluama3kubgee.woff2" as="font" type="font/woff2" crossorigin>
@@ -262,7 +259,7 @@ def reviews_block():
         <blockquote>&ldquo;%s&rdquo;</blockquote>
         <figcaption class="review__who">%s<span class="review__src"><br>Google review &middot; Ari &ndash; Thai Street Food</span></figcaption>
       </figure>""" % (quote, who))
-    return """<section class="section section--ink">
+    return """<section class="section section--cream">
   <div class="container">
     <div class="section-head section-head--center">
       <span class="eyebrow">What people say</span>
@@ -438,7 +435,7 @@ def dish_tile(item, slug):
                  % (item["id"], name.replace('"', "&quot;")))
     else:
         media = ('<div class="dish__img" style="display:grid;place-items:center;'
-                 'background:#05070b;color:#f2c519;font-family:var(--font-head);'
+                 'background:var(--ink);color:#fff;font-family:var(--font-head);'
                  'font-weight:700;font-size:1.6rem" aria-hidden="true">ARI</div>')
 
     return """        <li class="dish">
@@ -496,21 +493,24 @@ def build_home():
         </div>
       </a>""" % (img, title, copy) for title, copy, img in usecases)
 
-    body = """<section class="hero" style="background-image:url('/assets/img/brand/pad-kra-pow-hero.jpg')">
-  <div class="container">
+    body = """<section class="hero hero--split">
+  <div class="container hero-grid">
     <div class="hero__inner">
       <span class="eyebrow">Corporate &amp; office catering &middot; Brisbane</span>
       <h1>Real Thai street food, <span class="accent">delivered to your office.</span></h1>
       <p class="hero__lede">Ari brings Brisbane&rsquo;s favourite Thai street food to your desks, boardrooms and staff events &mdash; cooked fresh, delivered hot, ready to serve. Packages from $24 per person.</p>
       <div class="btn-row">
         <a class="btn btn--primary" href="/enquiry/">Get a quote</a>
-        <a class="btn btn--ghost" href="/packages/">See packages &amp; pricing</a>
+        <a class="btn btn--ghost on-light" href="/packages/">See packages &amp; pricing</a>
       </div>
       <ul class="hero__points">
         <li>{CHECK} Delivered hot across Brisbane CBD and inner suburbs</li>
         <li>{CHECK} Vegan and gluten-free options in every package, no surcharge</li>
         <li>{CHECK} Menu and fixed quote back within one business day</li>
       </ul>
+    </div>
+    <div class="hero-media">
+      <img src="/assets/img/brand/pad-kra-pow-hero.jpg" alt="Pad Kra Pow with a fried egg and jasmine rice" width="1213" height="1349" loading="eager" fetchpriority="high">
     </div>
   </div>
 </section>
@@ -551,7 +551,7 @@ def build_home():
   </div>
 </section>
 
-<section class="section section--ink">
+<section class="section section--cream">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">How it works</span>
@@ -652,7 +652,7 @@ def build_packages():
         <div class="faq__body">%s</div>
       </details>""" % (q, a) for q, a in faqs)
 
-    body = """<section class="hero hero--page" style="background-image:url('/assets/img/brand/menu-hero.jpg')">
+    body = """<section class="hero hero--page">
   <div class="container">
     <div class="hero__inner">
       <span class="eyebrow">Packages &amp; pricing</span>
@@ -694,7 +694,7 @@ def build_packages():
   </div>
 </section>
 
-<section class="section section--ink">
+<section class="section section--cream">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">How it works</span>
@@ -743,7 +743,7 @@ def build_packages():
 
 def build_menu():
     nav, blocks = menu_sections()
-    body = """<section class="hero hero--page" style="background-image:url('/assets/img/brand/stir-fry-tile.jpg')">
+    body = """<section class="hero hero--page">
   <div class="container">
     <div class="hero__inner">
       <span class="eyebrow">Catering menu</span>
@@ -778,7 +778,7 @@ def build_menu():
 
 
 def build_about():
-    body = """<section class="hero hero--page" style="background-image:url('/assets/img/brand/entree-tile.jpg')">
+    body = """<section class="hero hero--page">
   <div class="container">
     <div class="hero__inner">
       <span class="eyebrow">About</span>
@@ -882,7 +882,7 @@ def build_about():
 
 
 def build_enquiry():
-    body = """<section class="hero hero--page" style="background-image:url('/assets/img/brand/menu-hero.jpg')">
+    body = """<section class="hero hero--page">
   <div class="container">
     <div class="hero__inner">
       <span class="eyebrow">Get a quote</span>
