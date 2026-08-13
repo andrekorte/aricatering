@@ -1,0 +1,19 @@
+{
+  "name": "ari-chat-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker that holds the Anthropic API key for the Ari Thai Catering chat widget",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260811.1",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.0.0"
+  }
+}

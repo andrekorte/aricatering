@@ -30,6 +30,20 @@ FORM_ENDPOINT = CFG["form_endpoint"]
 
 YEAR = CFG["copyright_year"]
 
+# The chat widget only ships once there is somewhere for it to talk to. Empty
+# endpoint (the default) means no script tag, no launcher, no extra bytes -
+# see chatbot/README.md for how to deploy the worker that fills this in.
+CHAT_ENDPOINT = CFG.get("chat_endpoint", "").strip()
+
+CHAT_SNIPPET = "" if not CHAT_ENDPOINT else (
+    '\n<script>window.ARI_CHAT=%s;</script>'
+    '\n<script src="/assets/js/chat.js" defer></script>' % json.dumps({
+        "endpoint": CHAT_ENDPOINT,
+        "email": EMAIL,
+        "phone": PHONE,
+        "site": "https://%s" % DOMAIN,
+    }, separators=(",", ":")))
+
 # --------------------------------------------------------------------------
 # Inline icons (no icon font, no external requests)
 # --------------------------------------------------------------------------
@@ -155,10 +169,11 @@ FOOTER = """<footer class="site-footer">
   <a class="btn btn--primary" href="/enquiry/">Get a quote</a>
 </div>
 
-<script src="/assets/js/site.js" defer></script>""" \
+<script src="/assets/js/site.js" defer></script>{CHAT}""" \
     .replace("{SHORT}", SHORT).replace("{NAME}", NAME).replace("{YEAR}", str(YEAR)) \
     .replace("{PHONE_HREF}", PHONE_HREF).replace("{PHONE}", PHONE) \
-    .replace("{EMAIL}", EMAIL).replace("{ADDRESS}", ADDRESS)
+    .replace("{EMAIL}", EMAIL).replace("{ADDRESS}", ADDRESS) \
+    .replace("{CHAT}", CHAT_SNIPPET)
 
 
 SCHEMA = json.dumps({
@@ -361,6 +376,46 @@ def package_cards(cta="/enquiry/", cta_label="Get a quote"):
                    .replace("{ITEMS}", items).replace("{BTN}", btn)
                    .replace("{CTA}", cta).replace("{CTA_LABEL}", cta_label))
     return '<div class="pkg-grid">\n%s\n    </div>' % "\n".join(out)
+
+
+ALWAYS_INCLUDED = [
+    "Delivery into Brisbane CBD and inner suburbs",
+    "Chafing dishes or insulated carriers so food arrives hot",
+    "Serving tongs and spoons for every dish",
+    "Plates, bowls, napkins and cutlery",
+    "Vegan and gluten-free dishes at no surcharge, labelled separately",
+    "Menu cards listing every dish and its dietary tags",
+    "One tax invoice, PO number included if you need it",
+]
+
+# Optional extras, priced on top of a package. Kept at module level (rather
+# than inside build_packages) because tools/build_kb.py reads them to build the
+# chatbot's knowledge base - the bot and the packages page quote one list.
+ADDONS = [
+    ("Entr&eacute;e platter &mdash; Moo Ping skewers, spring rolls, Thai fish cakes", "$9 per person"),
+    ("Thai snack grazing board &mdash; crispy pork crackers, jerky, Nam Prik dips", "$11 per person"),
+    ("Mango sticky rice", "$7 per person"),
+    ("Ari&rsquo;s Thai iced tea station &mdash; milk tea, lemon tea, O-Liang", "$6 per person"),
+    ("Extra main added to any package", "$8 per person"),
+    ("Extra steamed jasmine rice", "$3 per person"),
+    ("Staffed service &mdash; one server, up to 3 hours", "$220 per server"),
+    ("Delivery beyond Brisbane CBD and inner suburbs", "Quoted per event"),
+]
+
+FAQS = [
+    ("How much notice do you need?",
+     "<p>24 hours for the Street Lunch package, and 48 hours for Banquet and Street Feast so we can prep the entr&eacute;es and desserts. If you&rsquo;re in a bind, call us &mdash; we can often make same-day work for smaller groups.</p>"),
+    ("What is the minimum order?",
+     "<p>10 guests for Street Lunch, 15 for Ari Banquet and 20 for Street Feast. Below 10 people you&rsquo;re usually better off ordering direct from the restaurant &mdash; happy to point you there.</p>"),
+    ("Do you deliver outside the CBD?",
+     "<p>Delivery into Brisbane CBD and the inner suburbs is included in the per-person price. Further out we&rsquo;ll quote the delivery separately &mdash; just put the address on the enquiry form.</p>"),
+    ("How do you handle allergies?",
+     "<p>Tell us on the enquiry form and we&rsquo;ll build the menu around it. Dietary dishes are cooked separately and labelled clearly on delivery. Please note our kitchen handles nuts, shellfish, gluten, soy and sesame, so we can&rsquo;t guarantee a dish is free of traces.</p>"),
+    ("Can we get an invoice for the finance team?",
+     "<p>Yes. We invoice with an ABN and can quote against a purchase order number. Add the PO number to the notes field and it will appear on the invoice.</p>"),
+    ("What if our numbers change?",
+     "<p>Final numbers are due 48 hours before delivery. Small increases after that are usually fine &mdash; call and we&rsquo;ll do what we can.</p>"),
+]
 
 
 # --------------------------------------------------------------------------
@@ -615,39 +670,15 @@ def build_home():
 
 
 def build_packages():
-    addons = [
-        ("Entr&eacute;e platter &mdash; Moo Ping skewers, spring rolls, Thai fish cakes", "$9 per person"),
-        ("Thai snack grazing board &mdash; crispy pork crackers, jerky, Nam Prik dips", "$11 per person"),
-        ("Mango sticky rice", "$7 per person"),
-        ("Ari&rsquo;s Thai iced tea station &mdash; milk tea, lemon tea, O-Liang", "$6 per person"),
-        ("Extra main added to any package", "$8 per person"),
-        ("Extra steamed jasmine rice", "$3 per person"),
-        ("Staffed service &mdash; one server, up to 3 hours", "$220 per server"),
-        ("Delivery beyond Brisbane CBD and inner suburbs", "Quoted per event"),
-    ]
     addon_html = "\n".join(
         '      <li><span class="addons__name">%s</span><span class="addons__price">%s</span></li>' % (n, p)
-        for n, p in addons)
+        for n, p in ADDONS)
 
-    faqs = [
-        ("How much notice do you need?",
-         "<p>24 hours for the Street Lunch package, and 48 hours for Banquet and Street Feast so we can prep the entr&eacute;es and desserts. If you&rsquo;re in a bind, call us &mdash; we can often make same-day work for smaller groups.</p>"),
-        ("What is the minimum order?",
-         "<p>10 guests for Street Lunch, 15 for Ari Banquet and 20 for Street Feast. Below 10 people you&rsquo;re usually better off ordering direct from the restaurant &mdash; happy to point you there.</p>"),
-        ("Do you deliver outside the CBD?",
-         "<p>Delivery into Brisbane CBD and the inner suburbs is included in the per-person price. Further out we&rsquo;ll quote the delivery separately &mdash; just put the address on the enquiry form.</p>"),
-        ("How do you handle allergies?",
-         "<p>Tell us on the enquiry form and we&rsquo;ll build the menu around it. Dietary dishes are cooked separately and labelled clearly on delivery. Please note our kitchen handles nuts, shellfish, gluten, soy and sesame, so we can&rsquo;t guarantee a dish is free of traces.</p>"),
-        ("Can we get an invoice for the finance team?",
-         "<p>Yes. We invoice with an ABN and can quote against a purchase order number. Add the PO number to the notes field and it will appear on the invoice.</p>"),
-        ("What if our numbers change?",
-         "<p>Final numbers are due 48 hours before delivery. Small increases after that are usually fine &mdash; call and we&rsquo;ll do what we can.</p>"),
-    ]
     faq_html = "\n".join(
         """      <details>
         <summary>%s</summary>
         <div class="faq__body">%s</div>
-      </details>""" % (q, a) for q, a in faqs)
+      </details>""" % (q, a) for q, a in FAQS)
 
     body = """<section class="hero hero--page hero--photo" style="background-image:url('/assets/img/brand/menu-hero.jpg')">
   <div class="container">
@@ -722,15 +753,7 @@ def build_packages():
         .replace("{ADDONS}", addon_html) \
         .replace("{FAQS}", faq_html) \
         .replace("{CTA}", CTA_BAND) \
-        .replace("{INCLUDED}", ticks([
-            "Delivery into Brisbane CBD and inner suburbs",
-            "Chafing dishes or insulated carriers so food arrives hot",
-            "Serving tongs and spoons for every dish",
-            "Plates, bowls, napkins and cutlery",
-            "Vegan and gluten-free dishes at no surcharge, labelled separately",
-            "Menu cards listing every dish and its dietary tags",
-            "One tax invoice, PO number included if you need it",
-        ]))
+        .replace("{INCLUDED}", ticks(ALWAYS_INCLUDED))
 
     write("/packages/index.html", page(
         "/packages/", "Catering Packages &amp; Pricing | " + NAME,

@@ -45,7 +45,9 @@ assets/img/brand/       logo and hero photography
 assets/menu-data.json   dish names/ids, mirrored from the restaurant menu
 site.config.json        name, domain, phone, email, form endpoint
 tools/build.py          regenerates every HTML page
+tools/build_kb.py       regenerates the chat assistant's knowledge base
 tools/rebrand.py        swaps name/domain/email across the whole site
+chatbot/                the AI chat assistant — off by default, see below
 ```
 
 The HTML files in the repo are what gets deployed. `tools/build.py` exists so
@@ -68,6 +70,21 @@ Layout choices follow current catering-site conversion practice: visible
 per-person price anchors rather than "call for pricing", menus grouped by
 occasion, a short multi-step enquiry form instead of one long one, an explicit
 response-time promise, and a sticky call/quote bar on mobile.
+
+## The chat assistant
+
+`chatbot/` holds an AI assistant that answers catering questions on the site
+and hands anything it shouldn't answer — allergies, availability, discounts —
+to a human. It is **off** until `chat_endpoint` is set in `site.config.json`:
+no endpoint, no script tag, no launcher.
+
+It answers only from a knowledge base generated out of this repo's own content,
+so it cannot quote a price the site doesn't show. Try it locally with
+`python3 chatbot/dev-server.py` (no API key needed).
+
+- [`chatbot/README.md`](chatbot/README.md) — how to run, deploy and change it
+- [`chatbot/DESIGN.md`](chatbot/DESIGN.md) — why it's built this way
+- [`chatbot/system-rules.md`](chatbot/system-rules.md) — what it may and may not say
 
 ## Changing the name and domain
 
@@ -113,6 +130,10 @@ Things that need a real decision, roughly in order of importance:
    have them.
 8. **Service scope.** Built for corporate and office catering only. Weddings,
    private parties and live cooking/market stalls are deliberately absent.
+9. **The chat assistant.** Built and tested, but switched off — it needs an
+   Anthropic API account and a deployed worker before it can be turned on
+   (`chatbot/README.md`). It answers from the prices and claims above, so it
+   inherits every item on this list.
 
 ## Deploying on GitHub Pages
 

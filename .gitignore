@@ -2,3 +2,9 @@
 __pycache__/
 *.pyc
 .venv/
+
+# Chatbot worker
+node_modules/
+.wrangler/
+# Local worker secrets - the API key must never be committed
+.dev.vars

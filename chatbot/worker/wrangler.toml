@@ -1,0 +1,30 @@
+name = "ari-chat"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Only these origins may call the worker from a browser. Anything else gets a
+# 403 before a single token is spent.
+ALLOWED_ORIGINS = "https://ari-thaicatering.com.au,https://www.ari-thaicatering.com.au"
+
+# Haiku 4.5 is the default: the assistant reads a short knowledge base and
+# answers a factual question, which is the job Haiku is built for, and it
+# replies fast enough to feel like typing. Swap this for claude-sonnet-5 if
+# answer quality ever matters more than latency and cost - nothing else in the
+# worker changes.
+MODEL = "claude-haiku-4-5"
+
+# Per-IP rate limit: 15 messages a minute is far above real use and far below
+# anything that could run up a bill. namespace_id is a number you pick, unique
+# within this worker. Delete this block if you would rather not use it - the
+# worker checks for the binding before calling it.
+[[unsafe.bindings]]
+name = "RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 15, period = 60 }
+
+# The API key is NOT here. Set it as a secret, which is encrypted at rest and
+# never appears in this file or in git:
+#   npx wrangler secret put ANTHROPIC_API_KEY
