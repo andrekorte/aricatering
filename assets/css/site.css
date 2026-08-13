@@ -210,7 +210,9 @@ a  { color: inherit; }
 .hero-media img { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; }
 @media (max-width: 860px) {
   .hero-grid { grid-template-columns: 1fr; }
+  .hero-media { order: -1; margin-bottom: 0.5rem; }
   .hero-media img { aspect-ratio: 16/10; }
+  .hero--split .hero__inner { padding-block: 1.75rem clamp(2.5rem, 7vw, 3.5rem); }
 }
 
 /* ---------- Trust strip ---------------------------------------------- */
