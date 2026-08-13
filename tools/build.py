@@ -652,7 +652,7 @@ def build_packages():
         <div class="faq__body">%s</div>
       </details>""" % (q, a) for q, a in faqs)
 
-    body = """<section class="hero hero--page">
+    body = """<section class="hero hero--page hero--photo" style="background-image:url('/assets/img/brand/menu-hero.jpg')">
   <div class="container">
     <div class="hero__inner">
       <span class="eyebrow">Packages &amp; pricing</span>
@@ -778,7 +778,7 @@ def build_menu():
 
 
 def build_about():
-    body = """<section class="hero hero--page">
+    body = """<section class="hero hero--page hero--photo" style="background-image:url('/assets/img/brand/entree-tile.jpg')">
   <div class="container">
     <div class="hero__inner">
       <span class="eyebrow">About</span>
@@ -882,7 +882,7 @@ def build_about():
 
 
 def build_enquiry():
-    body = """<section class="hero hero--page">
+    body = """<section class="hero hero--page hero--photo" style="background-image:url('/assets/img/gallery/bowl-15.jpg')">
   <div class="container">
     <div class="hero__inner">
       <span class="eyebrow">Get a quote</span>

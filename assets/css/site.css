@@ -218,11 +218,18 @@ a  { color: inherit; }
     rgba(250, 248, 245, 0.32) 100%);
 }
 @media (max-width: 720px) {
+  /* A horizontal wash doesn't work on a full-width mobile column - instead
+     reserve a real photo band up top (fixed px, not %, so it holds steady
+     regardless of how much lede text follows), then push all text below it
+     onto solid ground rather than blending the two. */
+  .hero--photo { padding-top: 0; }
+  .hero--photo .hero__inner { padding-top: 200px; }
   .hero--photo::after {
     background: linear-gradient(180deg,
-      rgba(250, 248, 245, 0.4)  0%,
-      rgba(250, 248, 245, 0.98) 9%,
-      rgba(250, 248, 245, 1)    16%);
+      rgba(250, 248, 245, 0.1)  0px,
+      rgba(250, 248, 245, 0.2)  120px,
+      rgba(250, 248, 245, 0.92) 168px,
+      rgba(250, 248, 245, 1)    195px);
   }
 }
 
