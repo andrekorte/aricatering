@@ -404,9 +404,6 @@ MENU_SECTIONS = [
      "Every package can be built fully vegan &mdash; no surcharge, no separate order.", None),
     ("gluten-free", "Gluten-free mains", ["gluten-free"],
      "Prepared with gluten-free sauces and labelled separately on delivery.", None),
-    ("snacks", "Thai snacks &amp; sweets", ["thai-snacks", "dessert"],
-     "Grazing boards for all-day events and afternoon breaks, plus mango sticky rice to finish. Available as add-ons.",
-     ["Durian"]),
     ("drinks", "Ari&rsquo;s Thai drinks", ["aris-drinks"],
      "Our iced tea station, brewed the Bangkok way. Add to any package.", None),
 ]
