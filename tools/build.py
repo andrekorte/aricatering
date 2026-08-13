@@ -778,7 +778,7 @@ def build_menu():
 
 
 def build_about():
-    body = """<section class="hero hero--page hero--photo" style="background-image:url('/assets/img/brand/entree-tile.jpg')">
+    body = """<section class="hero hero--page hero--photo" style="background-image:url('/assets/img/brand/about-hero.jpg')">
   <div class="container">
     <div class="hero__inner">
       <span class="eyebrow">About</span>

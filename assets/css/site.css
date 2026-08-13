@@ -218,25 +218,22 @@ a  { color: inherit; }
     rgba(250, 248, 245, 0.32) 100%);
 }
 @media (max-width: 720px) {
-  /* A horizontal wash doesn't work on a full-width mobile column, so use a
-     real photo band up top with the text below it on solid ground.
+  /* A horizontal wash doesn't work on a full-width mobile column - instead
+     let the photo show through strongly at the top and fade into cream
+     before the text starts, so the text always sits on solid ground.
 
-     The band is its own element rather than the section's background: the
-     section is ~650px tall and only ~200px narrow, so `cover` on it fits by
-     height and the visible top band would only ever show the top third of
-     the photo — which on several of these shots is packaging and table, not
-     food. Sizing `cover` against the band itself (390x200, landscape) crops
-     to the middle of the image instead, where the dish actually is. */
+     Note the image fills the hero's full height here, so only its top
+     portion is ever visible through this fade - pick hero images whose
+     subject sits high in the frame (see about-hero.jpg). */
   .hero--photo { padding-top: 0; }
-  .hero--photo .hero__inner { padding-top: 228px; }
-  .hero--photo::before {
-    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 200px;
-    z-index: -1;
-    background-image: inherit;
-    background-size: cover;
-    background-position: center;
+  .hero--photo .hero__inner { padding-top: 200px; }
+  .hero--photo::after {
+    background: linear-gradient(180deg,
+      rgba(250, 248, 245, 0.1)  0px,
+      rgba(250, 248, 245, 0.2)  120px,
+      rgba(250, 248, 245, 0.92) 168px,
+      rgba(250, 248, 245, 1)    195px);
   }
-  .hero--photo::after { z-index: -2; background: var(--cream); }
 }
 
 /* Home hero: text + rounded photo card, side by side. */
