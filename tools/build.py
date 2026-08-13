@@ -518,7 +518,7 @@ def build_home():
 <section class="trust">
   <div class="container trust__inner">
     <div class="trust__item">{CHEF} Cooked fresh in our Adelaide St kitchen</div>
-    <div class="trust__item">{LEAF} Vegan &amp; gluten-free as standard</div>
+    <div class="trust__item">{LEAF} Vegan &amp; gluten-free options</div>
     <div class="trust__item">{CLOCK} 24 hours&rsquo; notice, minimum 10 guests</div>
     <div class="trust__item">{DOC} Tax invoice and PO friendly</div>
   </div>
