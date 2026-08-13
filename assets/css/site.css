@@ -203,6 +203,29 @@ a  { color: inherit; }
 
 .hero--page { text-align: left; }
 
+/* Inner-page hero with a faint photo showing through — strong light scrim
+   near the text so it stays crisp, fading out toward the edge. */
+.hero--photo {
+  position: relative; background-size: cover; background-position: center;
+  isolation: isolate;
+}
+.hero--photo::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(100deg,
+    rgba(250, 248, 245, 1)    0%,
+    rgba(250, 248, 245, 0.94) 32%,
+    rgba(250, 248, 245, 0.68) 62%,
+    rgba(250, 248, 245, 0.32) 100%);
+}
+@media (max-width: 720px) {
+  .hero--photo::after {
+    background: linear-gradient(180deg,
+      rgba(250, 248, 245, 0.4)  0%,
+      rgba(250, 248, 245, 0.98) 9%,
+      rgba(250, 248, 245, 1)    16%);
+  }
+}
+
 /* Home hero: text + rounded photo card, side by side. */
 .hero--split .hero__inner { max-width: none; padding-block: clamp(3rem, 7vw, 5.5rem); }
 .hero-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: clamp(2rem, 5vw, 3.5rem); align-items: center; }

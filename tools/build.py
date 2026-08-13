@@ -743,7 +743,7 @@ def build_packages():
 
 def build_menu():
     nav, blocks = menu_sections()
-    body = """<section class="hero hero--page">
+    body = """<section class="hero hero--page hero--photo" style="background-image:url('/assets/img/brand/stir-fry-tile.jpg')">
   <div class="container">
     <div class="hero__inner">
       <span class="eyebrow">Catering menu</span>
