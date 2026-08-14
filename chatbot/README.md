@@ -19,17 +19,47 @@ tools/build_kb.py        regenerates the knowledge base from the site content
 
 ## Try it now, without an account
 
+Every command in this file goes into a terminal — **PowerShell** on Windows
+(Windows key, type `powershell`), **Terminal** on macOS (`Cmd + Space`, type
+`terminal`) — one line at a time, pressing Enter after each. Long commands wrap
+on screen; a wrapped command is still one line.
+
+Two Windows differences that apply to every command below: write `python`
+wherever this file says `python3`, and where a command joins two others with
+`&&`, run them as two separate lines instead.
+
+Get the repo, once:
+
 ```sh
-python3 chatbot/dev-server.py
+git clone -b claude/ari-thai-catering-site-uqvbkc https://github.com/andrekorte/aricatering.git
+cd aricatering
+```
+
+Then start the server. Windows calls Python `python`, macOS and Linux call it
+`python3`:
+
+```powershell
+python chatbot/dev-server.py     # Windows
+```
+```sh
+python3 chatbot/dev-server.py    # macOS / Linux
 ```
 
 Open <http://127.0.0.1:8000/>. The widget is injected into every page as it is
 served. With no API key set you get canned replies — enough to check the
 interface, not the assistant.
 
-To talk to the real model, set a key (from
-<https://console.anthropic.com/> → API keys) and restart:
+The terminal looks frozen while the server runs; that is what running looks
+like. `Ctrl + C` stops it.
 
+To talk to the real model, set a key (from
+<https://console.anthropic.com/> → API keys) and restart. Windows needs two
+lines for this, macOS one:
+
+```powershell
+$env:ANTHROPIC_API_KEY = "sk-ant-..."
+python chatbot/dev-server.py
+```
 ```sh
 ANTHROPIC_API_KEY=sk-ant-... python3 chatbot/dev-server.py
 ```
