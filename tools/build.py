@@ -793,7 +793,7 @@ def build_menu():
 
     write("/menu/index.html", page(
         "/menu/", "Thai Catering Menu | " + NAME,
-        "The full Ari catering menu: Thai mains and stir-fries, entrees and skewers, vegan and gluten-free dishes, grazing boards and Thai iced teas for Brisbane offices and events.",
+        "The full Ari catering menu: Thai mains and stir-fries, entrees and skewers, vegan and gluten-free dishes and Thai iced teas for Brisbane offices and events.",
         body, "/menu/", og_image="/assets/img/brand/stir-fry-tile.jpg"))
 
 
