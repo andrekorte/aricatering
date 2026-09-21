@@ -60,6 +60,12 @@ before it is deployed. Changing any rule requires a new row.
 |---|---|---|---|---|
 | v0.1 | — | **NOT YET APPROVED** | — | Drafted 21 Sep 2026 from the owner's answers and the catering FAQ document, which the owner confirmed is the source of truth over the website. Awaiting review. |
 
+Approval was requested on 21 Sep 2026 by sending the owner
+`chatbot/docs/Ari-Chatbot-Owner-Questions.docx` — the rules below in plain
+language, the facts the assistant will state, and the open decisions. That file
+is kept in the repository as the record of exactly what was put to her, since
+an approval is only meaningful if you can show what was approved.
+
 **Amendments since approval, not requiring re-approval:**
 
 | Date | Change | Why it is not a policy change |
