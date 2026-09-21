@@ -55,6 +55,11 @@ jobs:
             exit 1
           fi
 
+      # Free, no API calls: catches a rule added without a test, a case naming
+      # a rule that no longer exists, and a rule that no risk row explains.
+      - name: Check every rule has a test and a reason
+        run: python3 chatbot/evals/coverage.py
+
       - name: Run guardrail evals (English)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

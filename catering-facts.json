@@ -1,0 +1,122 @@
+{
+  "_readme": [
+    "THE SOURCE OF TRUTH for catering facts. Owner-supplied, owner-owned.",
+    "",
+    "Everything the chat assistant is allowed to state as fact is generated from",
+    "this file by tools/build_kb.py. The website is generated from it too, so the",
+    "page and the assistant cannot disagree: there is one place to change a price",
+    "and both follow. CI fails if the generated files drift from it.",
+    "",
+    "Content is taken from the owner's catering FAQ document (Ari_Thai_Catering_FAQ",
+    "_Website.docx) and the owner's answers of 21 Sep 2026. Where the FAQ document",
+    "and the previous website disagreed, the FAQ wins - that was decision 1 of",
+    "21 Sep 2026.",
+    "",
+    "Anything marked _provisional is NOT yet confirmed by the owner and is written",
+    "in its most conservative form until it is. See RISKS.md."
+  ],
+
+  "business": {
+    "name": "Ari Thai Catering",
+    "parent": "Ari - Thai Street Food, a Thai restaurant in Brisbane City",
+    "address": "6/158 Adelaide St, Brisbane City QLD 4000",
+    "email": "arithaistreetfood@gmail.com",
+    "phone": "+61 452 643 155",
+    "restaurant_hours": "Monday to Friday 9.00am to 8.00pm, Saturday and Sunday 10.00am to 6.00pm",
+    "caters": [
+      "office lunches",
+      "meetings and team events",
+      "corporate functions",
+      "Christmas and end-of-year parties",
+      "weddings and small private events"
+    ],
+    "scope_note": "We want the business. Never turn an event away: if an enquiry does not fit the standard packages, ask them to email us so we can review the options."
+  },
+
+  "packages": [
+    { "tier": "Food only",                  "price": "19.99", "gst": "plus GST" },
+    { "tier": "Food and dessert",           "price": "26.99", "gst": "plus GST" },
+    { "tier": "Food, dessert and a drink",  "price": "32.99", "gst": "plus GST" }
+  ],
+  "price_note": "Prices are per person and are EXCLUSIVE of GST. These are the only prices that may be stated.",
+
+  "ordering": {
+    "minimum_people": 10,
+    "notice_hours": 48,
+    "typical_maximum": "approximately 40 to 50 people",
+    "over_maximum": "For larger or more complex events, ask the customer to email us so we can review the options. Never refuse the event and never confirm we can do it.",
+    "how_to_order": "By email to arithaistreetfood@gmail.com. We confirm the order and issue an invoice.",
+    "payment": "Payment is by invoice. Credit card payment is available. We can invoice a business.",
+    "deposit": "A minimum 25% deposit is required to confirm a catering order.",
+    "changes": "Changes can be made up to 24 hours before the scheduled order.",
+    "cancellation": "Cancellations are non-refundable. The amount paid is provided as credit towards a future order, subject to our catering terms."
+  },
+
+  "delivery": {
+    "hours": "9.00am to 6.00pm",
+    "free_area": "Free delivery within 5 km of the Brisbane CBD for orders of 10 people or more.",
+    "outside_area": "Delivery outside the free-delivery area can be arranged. Delivery fees start from $15 and vary with distance and order size.",
+    "timing": "Tell us what time your meeting or event starts and we aim to deliver about 30 minutes beforehand, so the food arrives fresh and ready to serve.",
+    "in_building": "We deliver to an agreed point such as reception or a meeting room, subject to building access.",
+    "pickup": "Pick-up is available from Ari - Thai Street Food in Brisbane City."
+  },
+
+  "food": {
+    "style": "Thai rice meals. Depending on the package, guests have one or two food choices.",
+    "popular_dishes": [
+      "Massaman Chicken",
+      "Green Curry Chicken",
+      "Pad Kra Pao with chicken or pork",
+      "Fried rice",
+      "Tom Yum fried rice"
+    ],
+    "availability_note": "Menu availability may vary.",
+    "add_ons": ["A fried egg can be added where available."],
+    "packaging": [
+      "Individually packed meals, one per guest.",
+      "Shared-style catering for the group."
+    ],
+    "mixed_choices": "Menu selections can be mixed within a package according to the group's requirements.",
+    "desserts_drinks": "Dessert and a drink are included by choosing the matching package."
+  },
+
+  "dietary": {
+    "options": "Vegan, vegetarian and gluten-free choices are available. Tell us your dietary requirements when ordering.",
+    "cross_contamination": "Our kitchen prepares all dishes in one place using shared equipment, so we cannot guarantee that any dish is free of traces of an allergen.",
+    "_provisional": "cross_contamination is the CONSERVATIVE position, used because the owner has not yet confirmed with the kitchen (answer 1c, 21 Sep 2026). If the kitchen can genuinely prepare an allergen-free dish with separate equipment, this changes - and it needs the owner's approval before it does. Understating what the kitchen can do is safe; overstating it is not.",
+    "always_say": "Please confirm any allergies and dietary requirements with our staff when you order.",
+    "ingredients": "We can provide ingredient information for menu items so you can check anything relevant to your requirements."
+  },
+
+  "faqs": [
+    ["How many people do you cater for?", "Our minimum catering order is 10 people. We cater for office lunches, small groups and larger orders of approximately 40 to 50 people. For anything bigger, email us and we will review the options with you."],
+    ["How far in advance should I order?", "Please place your catering order at least 48 hours in advance."],
+    ["What are your delivery hours?", "Catering delivery is available from 9.00am to 6.00pm."],
+    ["Do you offer free delivery?", "Yes. Orders for 10 people or more receive free delivery within 5 km of the Brisbane CBD."],
+    ["Can you deliver outside the free-delivery area?", "Yes. Delivery outside the free-delivery area can be arranged. Delivery fees start from $15 and vary depending on distance and order size."],
+    ["Can I pick up my catering order?", "Yes. Pick-up is available from Ari - Thai Street Food in Brisbane City."],
+    ["Can I choose a delivery time?", "Yes. Tell us what time your meeting or event starts. We aim to deliver about 30 minutes beforehand so the food arrives fresh and ready to serve."],
+    ["Where will you deliver within an office building?", "We can deliver to an agreed location such as reception, a meeting area or another nominated point, subject to building access."],
+    ["What type of food do you offer for catering?", "Our catering is Thai rice meals. Depending on the package you choose, guests have one or two food choices."],
+    ["What dishes are available?", "Popular choices include Massaman Chicken, Green Curry Chicken, Pad Kra Pao with chicken or pork, fried rice and Tom Yum fried rice. Menu availability may vary."],
+    ["Can I add a fried egg?", "Yes. A fried egg can be added where available."],
+    ["Do you have vegan, vegetarian and gluten-free options?", "Yes. Vegan, vegetarian and gluten-free choices are available. Please tell us your dietary requirements when you order."],
+    ["How do you handle food allergies?", "We can provide ingredient information for menu items so you can check anything relevant to your allergies or dietary needs. Our kitchen prepares all dishes in one place using shared equipment, so we cannot guarantee that any dish is free of traces of an allergen. Please tell us about any allergies and confirm them with our staff when you order."],
+    ["Can meals be individually packed?", "Yes. You can choose individual meal packaging for each guest."],
+    ["Can the food be supplied for sharing?", "Yes. You can also choose shared-style catering for your group."],
+    ["Can we mix different meal choices in one order?", "Yes. Menu selections can be arranged according to the package and the group's requirements."],
+    ["Do you offer desserts and drinks?", "Yes. You can choose food only, food and dessert, or food, dessert and a drink."],
+    ["How do I order and pay?", "Email us at arithaistreetfood@gmail.com with your date, numbers and requirements. We confirm the order and issue an invoice. Credit card payment is available."],
+    ["Can you provide an invoice for a business?", "Yes. We can provide an invoice for corporate and business orders."],
+    ["Are your prices inclusive of GST?", "No. The listed catering prices are exclusive of GST."],
+    ["Is a deposit required?", "Yes. A minimum 25% deposit is required to confirm the catering order."],
+    ["Can I change my order after booking?", "Yes. Changes can be made up to 24 hours before the scheduled order."],
+    ["What is your cancellation policy?", "Cancellations are non-refundable. The amount paid will be provided as credit for a future order, subject to our catering terms."],
+    ["Do you cater for corporate events?", "Yes. We cater for office lunches, meetings, team events and corporate functions."],
+    ["Do you cater for Christmas parties?", "Yes. We cater for Christmas and end-of-year celebrations."],
+    ["Do you cater for weddings and private events?", "Yes. We cater for weddings and small private events. Menu and service options are discussed according to the event, so email us with the details."],
+    ["Can you cater for events of up to 40 to 50 people?", "Yes. We can accommodate catering orders of approximately 40 to 50 people. For larger or more complex events, email us to discuss your requirements."]
+  ],
+
+  "closing_note": "Menu availability, delivery fees and event requirements may vary. Final details are confirmed at the time of booking."
+}

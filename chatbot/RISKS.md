@@ -65,22 +65,44 @@ assurance.
 
 ---
 
-## The open content risk, unresolved at v0.1
+## The content conflict, and how it was resolved
 
-**The website and the catering FAQ document state different facts.** Not nuance
-— different prices, different package names, different GST treatment, different
-minimums, different delivery terms, and a different answer on whether the
-business caters weddings.
+At first draft the website and the owner's catering FAQ stated different facts —
+different prices, package names, GST treatment, minimums, delivery terms and a
+different answer on whether the business caters weddings. A knowledge base built
+from both would have had the assistant confidently state whichever it happened
+to draw on.
 
-A knowledge base built from both would make the assistant confidently state
-whichever it happened to draw on. A knowledge base built from one, while the
-other stays published, means the assistant and the website contradict each
-other in front of the customer.
+**Resolved 21 Sep 2026: the FAQ document is the source of truth.** It is now
+held as `catering-facts.json`, and both the knowledge base and (once rewritten)
+the website are generated from it. There is one place to change a price.
 
-This is a business decision and it is logged here as an open risk until the
-owner resolves it. No knowledge base is generated until it is.
+Two consequences worth stating plainly:
+
+- **The live website is now wrong.** It advertises three named packages at
+  $24/$34/$46 including GST, a 56-dish menu, grazing boards and staffed service.
+  None of that is what the business sells. The assistant must not go live before
+  the site is rebuilt from the same file, or the bot and the page it sits on will
+  contradict each other in front of the customer.
+- **The FAQ document itself contained one error**, corrected on the owner's
+  instruction: it said customers could order and pay online directly. No such
+  system exists. Ordering is by email, then invoice.
 
 ---
+
+## Open owner action before go-live
+
+**The allergen position is provisional.** Asked whether the kitchen prepares
+everything with shared equipment, the owner's answer was "need to check with the
+kitchen" (21 Sep 2026). Until that is confirmed, the assistant states the
+conservative position: we cannot guarantee any dish is free of traces.
+
+That is deliberately the safe direction to be wrong in. If the kitchen turns out
+to have genuine separation, the assistant has understated what the business can
+do, which costs an enquiry. The other way round costs somebody a hospital visit.
+
+This is R1, and it is the one item on this page that must be closed by a person
+before anything is deployed.
 
 ## Risks we are accepting, and why
 

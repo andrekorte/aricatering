@@ -17,17 +17,17 @@
 
   var STORE_KEY = "ari-chat-v1";
   var GREETING =
-    "Hi - I can help with packages, pricing, the menu and how catering works. " +
+    "Hi - I can help with packages, delivery, dietary options and how ordering works. " +
     "What are you planning?";
   var SUGGESTIONS = [
-    "What is included in a package?",
-    "How much for 25 people?",
-    "Do you cater for vegans?",
-    "How much notice do you need?"
+    "What is in each package?",
+    "Do you deliver to my office?",
+    "How much notice do you need?",
+    "Do you have vegan options?"
   ];
   var FALLBACK =
     "Sorry - I could not reach the kitchen just then. Email " +
-    CFG.email + " or use the enquiry form and we will come straight back to you.";
+    CFG.email + " and we will come straight back to you.";
 
   // Only these strings ever become links in a reply.
   var LINKABLE = [
@@ -167,9 +167,9 @@
     el.form.appendChild(el.send);
 
     var foot = make("div", "chat-foot");
-    foot.appendChild(document.createTextNode("AI assistant - it can get things wrong. For allergies and firm quotes, "));
-    var link = make("a", null, "use the enquiry form");
-    link.href = "/enquiry/";
+    foot.appendChild(document.createTextNode("AI assistant - it can get things wrong. Confirm allergies, prices and dates with us at "));
+    var link = make("a", null, CFG.email);
+    link.href = "mailto:" + CFG.email;
     foot.appendChild(link);
     foot.appendChild(document.createTextNode("."));
 

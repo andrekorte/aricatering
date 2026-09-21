@@ -1,193 +1,166 @@
 #!/usr/bin/env python3
-"""Generate the chatbot's knowledge base from the site's own content.
-
-The assistant answers from a single document. That document is *derived*, not
-written: it imports the same Python constants that render the website, so a
-price change on the packages page cannot leave the chatbot quoting last
-month's number. Anything the bot is allowed to say either lives on the site or
-lives in OPERATIONAL_FACTS below.
+"""Generate the assistant's knowledge base from the owner's source of truth.
 
     python3 tools/build_kb.py
 
-Writes:
+Reads:
+    catering-facts.json     the owner's catering facts (see its _readme)
+    chatbot/system-rules.md the approved behavioural contract
 
-    chatbot/knowledge-base.md              human-readable, for review
+Writes:
+    chatbot/knowledge-base.md              human-readable, for owner review
     chatbot/worker/src/knowledge-base.ts   the same text, bundled into the worker
-    chatbot/worker/src/system-rules.ts     compiled from chatbot/system-rules.md
+    chatbot/worker/src/system-rules.ts     the rules, bundled into the worker
+
+Why generate rather than write
+------------------------------
+The assistant must not be able to state a price the business does not charge.
+Making the knowledge base a *derived* artefact means there is exactly one place
+to change a fact, and the generated files are checked in CI against their
+source - so a knowledge base that has drifted fails the build rather than
+answering a customer.
 
 The generated files are committed so the worker can be deployed from a clean
-checkout without Python. Re-run this after editing content in tools/build.py
-or the rules in chatbot/system-rules.md.
+checkout with no Python. Re-run this after editing either input, then run
+tools/build_worker.py.
 """
 
-import html
 import json
 import os
 import re
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-import build  # noqa: E402  (path set up above)
-
-ROOT = build.ROOT
-OUT_MD = os.path.join(ROOT, "chatbot", "knowledge-base.md")
-OUT_TS = os.path.join(ROOT, "chatbot", "worker", "src", "knowledge-base.ts")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FACTS = os.path.join(ROOT, "catering-facts.json")
 RULES_MD = os.path.join(ROOT, "chatbot", "system-rules.md")
-RULES_TS = os.path.join(ROOT, "chatbot", "worker", "src", "system-rules.ts")
-
-
-def plain(s):
-    """HTML fragment -> plain text. The site's content is authored as HTML."""
-    s = re.sub(r"<[^>]+>", "", s)
-    s = html.unescape(s)
-    return re.sub(r"\s+", " ", s).strip()
-
-
-# --------------------------------------------------------------------------
-# Facts the assistant needs that are not written on any page. Everything here
-# is a claim the business has to be able to stand behind - keep it short, keep
-# it checkable, and do not add anything speculative.
-# --------------------------------------------------------------------------
-
-OPERATIONAL_FACTS = """
-- Ari Thai Catering is the corporate and office catering arm of Ari - Thai
-  Street Food, a Thai restaurant at 6/158 Adelaide St, Brisbane City. Same
-  kitchen, same chefs.
-- We cater corporate and office events only: team lunches, working meetings,
-  board and client lunches, conferences, launches, staff celebrations and
-  end-of-year events.
-- We do NOT do weddings, private parties at home, or market stalls. If someone
-  asks about those, say so plainly and point them at the restaurant.
-- Service style is drop-off catering. The Ari Banquet package includes buffet
-  setup on arrival; Street Feast includes staffed service and pack-down.
-- Delivery is into Brisbane CBD and inner suburbs, included in the per-person
-  price. Anywhere further is quoted per event.
-- Quotes are returned within one business day of an enquiry.
-- Every quote is fixed and all-inclusive: food, serving equipment and delivery.
-- We invoice with an ABN and can quote against a purchase order number.
-- Final numbers are due 48 hours before delivery.
-- The restaurant is open seven days: Mon-Fri 9.00am-8.00pm, Sat-Sun
-  10.00am-6.00pm. Catering enquiries are answered during those hours.
-- Orders below 10 guests are better placed directly with the restaurant.
-"""
-
-
-def packages_md():
-    out = []
-    for p in build.PACKAGES:
-        out.append("### %s - $%s per person" % (p["name"], p["price"]))
-        out.append("Suits: %s" % plain(p["for"]))
-        out.append("Ordering: %s" % plain(p["min"]))
-        out.append("Includes:")
-        out += ["- %s" % plain(i) for i in p["includes"]]
-        out.append("")
-    return "\n".join(out)
-
-
-def menu_md():
-    """Dish names only. Retail prices are deliberately excluded - catering is
-    sold per person by package, and a bot quoting $16.99 for a dish would be
-    quoting the restaurant's takeaway price for something we sell differently."""
-    out = []
-    for _slug, title, cats, blurb, exclude in build.MENU_SECTIONS:
-        out.append("### %s" % plain(title))
-        out.append(plain(blurb))
-        skip = {plain(x) for x in (exclude or [])}
-        names = []
-        for cat in cats:
-            for item in build.BY_SLUG[cat]["items"]:
-                name = plain(item["name"])
-                if name not in skip and name not in names:
-                    names.append(name)
-        out += ["- %s" % n for n in names]
-        out.append("")
-    return "\n".join(out)
+OUT_MD = os.path.join(ROOT, "chatbot", "knowledge-base.md")
+OUT_KB_TS = os.path.join(ROOT, "chatbot", "worker", "src", "knowledge-base.ts")
+OUT_RULES_TS = os.path.join(ROOT, "chatbot", "worker", "src", "system-rules.ts")
 
 
 def read_rules():
-    """The behavioural rules, minus the HTML comment that heads the file."""
+    """The behavioural rules, minus the HTML comment header and the approval
+    record. The approval table is governance metadata for people, not
+    instructions for the model - shipping it would waste tokens and invite the
+    assistant to talk about its own approval status."""
     text = open(RULES_MD, encoding="utf-8").read()
     text = re.sub(r"^<!--.*?-->\s*", "", text, flags=re.S)
+    text = text.split("\n---\n\n## Approval record")[0]
     return text.strip()
 
 
-def build_kb():
-    parts = [
-        "# %s - assistant knowledge base" % build.NAME,
-        "",
-        "Generated by tools/build_kb.py from the website content. Do not edit by hand.",
-        "",
-        "## The business",
-        OPERATIONAL_FACTS.strip(),
-        "",
-        "## Contact",
-        "- Enquiry form (the preferred route for any quote): https://%s/enquiry/" % build.DOMAIN,
-        "- Email: %s" % build.EMAIL,
-        "- Phone: %s" % build.PHONE,
-        "- Address: %s" % build.ADDRESS,
-        "",
-        "## Packages",
-        "Prices are per person, include GST, and cover delivery into Brisbane CBD",
-        "and inner suburbs. These are the only prices that may be quoted.",
-        "",
-        packages_md(),
-        "## Included in every package, at no extra cost",
-        "\n".join("- %s" % plain(i) for i in build.ALWAYS_INCLUDED),
-        "",
-        "## Add-ons (on top of a package price)",
-        "\n".join("- %s: %s" % (plain(n), plain(p)) for n, p in build.ADDONS),
-        "",
-        "## Catering menu",
-        "Dishes are chosen by package rather than priced individually.",
-        "",
-        menu_md(),
-        "## Dietary",
-        "- 10 vegan mains and 12 gluten-free mains to choose from.",
-        "- No surcharge for a vegan or gluten-free version of a dish.",
-        "- Dietary dishes are cooked separately, labelled, and served separately.",
-        "- The kitchen handles nuts, shellfish, gluten, soy and sesame, so no dish",
-        "  can be guaranteed free of traces. This is why allergy questions go to a",
-        "  human every time.",
-        "",
-        "## Questions we are asked often",
-        "\n\n".join("**%s**\n%s" % (plain(q), plain(a)) for q, a in build.FAQS),
-        "",
-    ]
-    return "\n".join(parts).rstrip() + "\n"
+def kb_from(f):
+    b, o, d, dl, food = f["business"], f["ordering"], f["dietary"], f["delivery"], f["food"]
+    L = []
+    add = L.append
+
+    add("# %s - assistant knowledge base" % b["name"])
+    add("")
+    add("Generated by tools/build_kb.py from catering-facts.json. Do not edit by hand.")
+    add("")
+
+    add("## The business")
+    add("- %s is the catering side of %s." % (b["name"], b["parent"]))
+    add("- Address: %s" % b["address"])
+    add("- Email: %s" % b["email"])
+    add("- Phone: %s" % b["phone"])
+    add("- The restaurant is open %s." % b["restaurant_hours"])
+    add("- We cater: %s." % ", ".join(b["caters"]))
+    add("- %s" % b["scope_note"])
+    add("")
+
+    add("## Packages")
+    add(f["price_note"])
+    add("")
+    for p in f["packages"]:
+        add("- %s: $%s per person, %s." % (p["tier"], p["price"], p["gst"]))
+    add("")
+    add("These packages have no names beyond the descriptions above. Do not invent a name for one.")
+    add("")
+
+    add("## Ordering")
+    add("- Minimum order: %d people." % o["minimum_people"])
+    add("- Notice required: at least %d hours." % o["notice_hours"])
+    add("- We cater up to %s." % o["typical_maximum"])
+    add("- %s" % o["over_maximum"])
+    add("- How to order: %s" % o["how_to_order"])
+    add("- Payment: %s" % o["payment"])
+    add("- Deposit: %s" % o["deposit"])
+    add("- Changes: %s" % o["changes"])
+    add("- Cancellation: %s" % o["cancellation"])
+    add("")
+
+    add("## Delivery and pick-up")
+    add("- Delivery hours: %s." % dl["hours"])
+    add("- %s" % dl["free_area"])
+    add("- %s" % dl["outside_area"])
+    add("- %s" % dl["timing"])
+    add("- %s" % dl["in_building"])
+    add("- %s" % dl["pickup"])
+    add("")
+
+    add("## The food")
+    add("- %s" % food["style"])
+    add("- Popular dishes: %s." % ", ".join(food["popular_dishes"]))
+    add("- %s" % food["availability_note"])
+    add("- These are the only dishes you may name. If someone asks about a dish that is not on this list, say you do not have that detail and ask them to email us.")
+    for a in food["add_ons"]:
+        add("- %s" % a)
+    add("- Packaging: %s" % " ".join(food["packaging"]))
+    add("- %s" % food["mixed_choices"])
+    add("- %s" % food["desserts_drinks"])
+    add("")
+
+    add("## Dietary requirements and allergies")
+    add("- %s" % d["options"])
+    add("- %s" % d["ingredients"])
+    add("- %s" % d["cross_contamination"])
+    add("- Say this in any answer that touches dietary requirements or allergies: \"%s\"" % d["always_say"])
+    add("- You may say a choice is available as vegan, vegetarian or gluten-free. You may never say a dish is free of an allergen, and never that it is safe for anyone.")
+    add("")
+
+    add("## Questions we are asked often")
+    add("")
+    for q, a in f["faqs"]:
+        add("**%s**" % q)
+        add(a)
+        add("")
+
+    add("## Note")
+    add(f["closing_note"])
+    return "\n".join(L).rstrip() + "\n"
+
+
+def emit_ts(path, name, text, source):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(
+            "// Generated by tools/build_kb.py - do not edit.\n"
+            "// Source of truth is %s.\n"
+            "export const %s = %s;\n" % (source, name, json.dumps(text))
+        )
 
 
 def main():
-    kb = build_kb()
+    if not os.path.exists(FACTS):
+        sys.exit("%s is missing" % FACTS)
+    facts = json.load(open(FACTS, encoding="utf-8"))
+    kb = kb_from(facts)
+    rules = read_rules()
 
     os.makedirs(os.path.dirname(OUT_MD), exist_ok=True)
     with open(OUT_MD, "w", encoding="utf-8") as fh:
         fh.write(kb)
-
-    # Emitted as a JS string literal rather than an imported .md file: no
-    # bundler config to get wrong, and json.dumps handles every escape.
-    os.makedirs(os.path.dirname(OUT_TS), exist_ok=True)
-    with open(OUT_TS, "w", encoding="utf-8") as fh:
-        fh.write(
-            "// Generated by tools/build_kb.py - do not edit.\n"
-            "// Source of truth is the site content in tools/build.py.\n"
-            "export const KNOWLEDGE_BASE = %s;\n" % json.dumps(kb)
-        )
-
-    rules = read_rules()
-    with open(RULES_TS, "w", encoding="utf-8") as fh:
-        fh.write(
-            "// Generated by tools/build_kb.py - do not edit.\n"
-            "// Source of truth is chatbot/system-rules.md.\n"
-            "export const SYSTEM_RULES = %s;\n" % json.dumps(rules)
-        )
+    emit_ts(OUT_KB_TS, "KNOWLEDGE_BASE", kb, "catering-facts.json")
+    emit_ts(OUT_RULES_TS, "SYSTEM_RULES", rules, "chatbot/system-rules.md")
 
     words = len((kb + rules).split())
     print("chatbot/knowledge-base.md            %6.1f KB" % (len(kb) / 1024))
     print("chatbot/worker/src/knowledge-base.ts %6.1f KB" % (len(kb) / 1024))
     print("chatbot/worker/src/system-rules.ts   %6.1f KB" % (len(rules) / 1024))
-    print("\nSystem prompt is ~%d words, roughly %d tokens." % (words, words * 4 // 3))
-    print("Cached after the first turn of a conversation.")
+    print("\nSystem prompt is ~%d words, roughly %d tokens, cached after the first turn."
+          % (words, words * 4 // 3))
+    print("Now run: python3 tools/build_worker.py")
 
 
 if __name__ == "__main__":

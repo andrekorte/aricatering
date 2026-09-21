@@ -29,6 +29,7 @@ MODEL = os.environ.get("MODEL", "claude-haiku-4-5")
 MAX_TOKENS = 700
 
 CFG = json.load(open(os.path.join(ROOT, "site.config.json")))
+EMAIL = CFG["email"]
 
 SNIPPET = (
     "<script>window.ARI_CHAT=%s;</script>\n"
@@ -61,24 +62,23 @@ def system_blocks():
 
 STUBS = [
     (r"\b(price|cost|how much|\$)\b",
-     "Street Lunch is $24 per person, Ari Banquet $34 and Street Feast $46. Those prices "
-     "include GST, serving gear and delivery into the Brisbane CBD. Send the date and "
-     "headcount through https://ari-thaicatering.com.au/enquiry/ and we will come back "
-     "with a fixed quote."),
-    (r"\b(allerg|nut|peanut|coeliac|celiac|shellfish|gluten.free.safe)\b",
-     "Our kitchen handles nuts, shellfish, gluten, soy and sesame, so I cannot promise a "
-     "dish is free of traces. Put the details on the enquiry form and the kitchen will "
-     "plan the menu around them: https://ari-thaicatering.com.au/enquiry/"),
+     "Our catering is $19.99 per person for food only, $26.99 with dessert and $32.99 "
+     "with dessert and a drink. Those prices are plus GST. Email %s "
+     "with your date and numbers and we will confirm the order." % EMAIL),
+    (r"\b(allerg|nut|peanut|coeliac|celiac|shellfish)\b",
+     "We can give you ingredient information, but our kitchen prepares everything in one "
+     "place with shared equipment, so we cannot guarantee any dish is free of traces. "
+     "Please confirm any allergies and dietary requirements with our staff when you order."),
     (r"\b(vegan|vegans|vegetarian|gluten)\b",
-     "Yes - there are 10 vegan mains and 12 gluten-free mains, at no surcharge, cooked "
-     "separately and labelled on delivery. Tell us the numbers on the enquiry form and we "
-     "will portion for them."),
-    (r"\b(deliver|delivery|suburb|area|where)\b",
-     "Delivery into the Brisbane CBD and inner suburbs is included in the per-person "
-     "price. Further out we quote it separately - put the address on the enquiry form."),
-    (r"\b(notice|lead time|when|book)\b",
-     "24 hours for Street Lunch, 48 hours for Ari Banquet and Street Feast. If you are in "
-     "a bind, call us - smaller same-day orders are often possible."),
+     "Yes, vegan, vegetarian and gluten-free choices are available. Please confirm any "
+     "allergies and dietary requirements with our staff when you order."),
+    (r"\b(deliver|delivery|suburb|area|where|pick ?up)\b",
+     "Delivery is free within 5 km of the Brisbane CBD for orders of 10 or more, between "
+     "9.00am and 6.00pm. Further out, delivery starts from $15. Pick-up from the "
+     "restaurant is also available."),
+    (r"\b(notice|lead time|when|book|order)\b",
+     "Please order at least 48 hours ahead, with a minimum of 10 people. Email %s "
+     "and we will confirm and invoice." % EMAIL),
 ]
 
 STUB_DEFAULT = (
