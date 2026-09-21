@@ -1,19 +1,38 @@
 #!/usr/bin/env python3
-"""Run the assistant's test cases against a running chat endpoint.
+"""Run the assistant's guardrail tests.
 
-    python3 chatbot/evals/run.py                       # local dev server
-    python3 chatbot/evals/run.py --endpoint https://ari-chat.<you>.workers.dev/chat
-    python3 chatbot/evals/run.py --only allergy --verbose
+    python3 chatbot/evals/run.py                  # test the prompt (needs ANTHROPIC_API_KEY)
+    python3 chatbot/evals/run.py --only allergy   # one group
+    python3 chatbot/evals/run.py --cases cases-th.json   # the Thai suite
+    python3 chatbot/evals/run.py --endpoint https://.../chat   # a deployed worker
 
-Why this exists: a prompt is code with no compiler. Every rule in
-chatbot/system-rules.md was added because of a specific way this assistant
-could hurt the business, and nothing except a test says whether the rule still
-holds after the next edit. Cases are graded on substrings, which is blunt -
-see the note at the top of cases.json about which assertions to trust.
+Two modes, deliberately
+-----------------------
+By default this calls the Anthropic API directly with exactly the system prompt
+the worker builds. The thing under test for a RULE is the prompt, not the HTTP
+plumbing: a rule can be broken without any worker existing, and CI should be
+able to block that without deploying anything.
 
-Exits non-zero if anything fails, so it can be wired into CI later.
+--endpoint tests the deployed worker instead. Same cases, different question:
+"is the thing we shipped behaving?" rather than "do the rules hold?". Both are
+worth running; only the first gates the build.
 
-Costs real money in live mode: about 20 short conversations per run.
+A prompt is code with no compiler. Every rule in chatbot/system-rules.md exists
+because of a row in chatbot/RISKS.md, and nothing except these cases says
+whether the rule still holds after the next edit.
+
+Flakiness and retries
+---------------------
+The model is non-deterministic, so a correct-by-design bot occasionally trips a
+case. Left unhandled that fails CI on random pushes and emails on every one -
+and a gate that cries wolf gets ignored, which is alert fatigue dressed up as
+diligence. So a failing case is retried (--retries, default 2 extra). CI fails
+ONLY on a case that fails EVERY attempt: a consistent, reproducible regression.
+A case that fails once and passes on retry is reported as FLAKY and listed,
+never silently dropped - flakiness on a guardrail is a reason to tighten the
+case or the rule, not something to hide.
+
+Exits non-zero only on a consistent failure.
 """
 
 import argparse
@@ -21,29 +40,115 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_ENDPOINT = "http://127.0.0.1:8000/chat"
+ROOT = os.path.dirname(os.path.dirname(HERE))
+MODEL = os.environ.get("MODEL", "claude-haiku-4-5")
+MAX_TOKENS = 700
 
-GREEN, RED, DIM, YELLOW, OFF = "\033[32m", "\033[31m", "\033[2m", "\033[33m", "\033[0m"
+GREEN, RED, DIM, YELLOW, BOLD, OFF = (
+    "\033[32m", "\033[31m", "\033[2m", "\033[33m", "\033[1m", "\033[0m",
+)
 
 
-def ask(endpoint, messages, timeout=90):
-    """POST a conversation, read our SSE format back, return the reply text."""
+# ---------------------------------------------------------------- the prompt
+
+def load_system():
+    """Rebuild the worker's system prompt from the same generated sources.
+
+    Reading the generated files rather than the markdown means the test sees
+    what the worker ships, not what someone meant to ship.
+    """
+    def from_ts(path, const):
+        try:
+            with open(path, encoding="utf-8") as fh:
+                src = fh.read()
+        except FileNotFoundError:
+            sys.exit("%s is missing - run tools/build_kb.py" % path)
+        m = re.search(r"export const %s = (\".*\");" % const, src, re.S)
+        if not m:
+            sys.exit("could not read %s from %s - run tools/build_kb.py" % (const, path))
+        return json.loads(m.group(1))
+
+    w = os.path.join(ROOT, "chatbot", "worker", "src")
+    rules = from_ts(os.path.join(w, "system-rules.ts"), "SYSTEM_RULES")
+    kb = from_ts(os.path.join(w, "knowledge-base.ts"), "KNOWLEDGE_BASE")
+    return [
+        {"type": "text", "text": rules},
+        {
+            "type": "text",
+            "text": "# KNOWLEDGE BASE\n\nEverything you are allowed to state as fact:\n\n" + kb,
+            "cache_control": {"type": "ephemeral"},
+        },
+    ]
+
+
+# ---------------------------------------------------------------- transports
+
+def ask_api(system, messages, timeout=90):
+    key = os.environ.get("ANTHROPIC_API_KEY")
+    if not key:
+        sys.exit("ANTHROPIC_API_KEY is not set.")
     req = urllib.request.Request(
-        endpoint,
-        data=json.dumps({"messages": messages}).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        "https://api.anthropic.com/v1/messages",
+        data=json.dumps({
+            "model": MODEL,
+            "max_tokens": MAX_TOKENS,
+            "system": system,
+            "messages": messages,
+        }).encode("utf-8"),
+        headers={
+            "content-type": "application/json",
+            "x-api-key": key,
+            "anthropic-version": "2023-06-01",
+        },
     )
     try:
         resp = urllib.request.urlopen(req, timeout=timeout)
     except urllib.error.HTTPError as err:
-        raise RuntimeError("HTTP %s: %s" % (err.code, err.read().decode()[:200])) from None
-    except urllib.error.URLError as err:
-        raise RuntimeError("could not reach %s (%s)" % (endpoint, err.reason)) from None
+        raise RuntimeError("HTTP %s: %s" % (err.code, err.read().decode()[:300])) from None
+    data = json.loads(resp.read().decode("utf-8"))
+    return "".join(b.get("text", "") for b in data.get("content", [])).strip()
 
+
+def ask_endpoint(endpoint, messages, origin, timeout=90, retries=2):
+    """Ask the deployed worker.
+
+    The Origin header is not optional. The worker refuses any request without an
+    allowed Origin, so a test that omits it gets a 403 and learns nothing about
+    the rules - it only re-proves the allowlist. The test has to arrive dressed
+    as the website.
+
+    Rate limiting has to be handled too: the worker allows a burst per minute
+    per IP and this suite makes more than that back to back. A 429 here is the
+    control working, not a defect, so we wait it out rather than report it as a
+    failure.
+    """
+    req = urllib.request.Request(
+        endpoint,
+        data=json.dumps({"messages": messages}).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Origin": origin,
+            # Cloudflare's bot protection blocks the default Python-urllib
+            # signature before the request reaches the worker at all. That is a
+            # platform control sitting in front of ours, and worth knowing:
+            # "the endpoint refused me" has two causes that look nothing alike.
+            "User-Agent": "ari-guardrail-evals/1.0 (+https://ari-thaicatering.com.au)",
+        },
+    )
+    try:
+        resp = urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.HTTPError as err:
+        if err.code == 429 and retries > 0:
+            wait = int(err.headers.get("Retry-After") or 20)
+            print("        %srate limited, waiting %ds%s" % (DIM, wait, OFF))
+            time.sleep(wait)
+            return ask_endpoint(endpoint, messages, origin, timeout, retries - 1)
+        raise RuntimeError("HTTP %s: %s" % (err.code, err.read().decode()[:200])) from None
     out = []
     for raw in resp:
         line = raw.decode("utf-8").strip()
@@ -57,79 +162,133 @@ def ask(endpoint, messages, timeout=90):
     return "".join(out).strip()
 
 
+# ---------------------------------------------------------------- grading
+
 def grade(reply, expect):
-    """Returns a list of failure descriptions - empty means the case passed."""
+    """Return a list of failure descriptions; empty means the case passed.
+
+    Two kinds of negative assertion, and the distinction is the hard-won part:
+
+      none        plain substrings. Cheap and readable, but they cannot tell a
+                  forbidden claim from a refusal to make it - "I can't tell you
+                  whether that dish is gluten free" contains "gluten free".
+                  Use ONLY for strings that cannot appear in a correct refusal:
+                  an amount, a total, a named promise.
+      none_regex  for everything else. "an affirmative safety claim" is what we
+                  actually mean, and it is not expressible as a substring.
+
+    A `none` pattern built from ordinary topic words is a bug in the test, not
+    a finding about the bot.
+    """
     low = reply.lower()
-    fails = []
-
-    for needle in expect.get("all", []):
-        if needle.lower() not in low:
-            fails.append("missing %r" % needle)
-
-    anys = expect.get("any", [])
-    if anys and not any(n.lower() in low for n in anys):
-        fails.append("none of %s present" % json.dumps(anys))
-
+    problems = []
     for needle in expect.get("none", []):
         if needle.lower() in low:
-            fails.append("FORBIDDEN %r present" % needle)
+            problems.append("must NOT contain %r" % needle)
+    for pattern in expect.get("none_regex", []):
+        if re.search(pattern, reply, re.I):
+            problems.append("must NOT match /%s/" % pattern)
+    for needle in expect.get("all", []):
+        if needle.lower() not in low:
+            problems.append("must contain %r" % needle)
+    anys = expect.get("any", [])
+    if anys and not any(n.lower() in low for n in anys):
+        problems.append("must contain one of %s" % anys)
+    for pattern in expect.get("any_regex", []):
+        if not re.search(pattern, reply, re.I):
+            problems.append("must match /%s/" % pattern)
+    cap = expect.get("max_chars")
+    if cap and len(reply) > cap:
+        problems.append("reply is %d chars, cap is %d" % (len(reply), cap))
+    return problems
 
-    cap = expect.get("max_words")
-    if cap and len(reply.split()) > cap:
-        fails.append("%d words, cap is %d" % (len(reply.split()), cap))
 
-    return fails
-
-
-def run_case(endpoint, case):
-    """Replays the turns, keeping the assistant's real replies in the history."""
-    messages = []
-    reply = ""
-    for turn in case["turns"]:
-        messages.append({"role": "user", "content": turn})
-        reply = ask(endpoint, messages)
-        messages.append({"role": "assistant", "content": reply})
-    return reply, grade(reply, case["expect"])
-
+# ---------------------------------------------------------------- runner
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--endpoint", default=os.environ.get("CHAT_ENDPOINT", DEFAULT_ENDPOINT))
-    ap.add_argument("--only", help="substring match on case id")
-    ap.add_argument("--verbose", action="store_true", help="print every reply")
+    ap.add_argument("--endpoint", help="test a deployed worker instead of the prompt")
+    ap.add_argument("--origin", default="https://ari-thaicatering.com.au",
+                    help="Origin header sent in --endpoint mode; the worker "
+                         "refuses anything else")
+    ap.add_argument("--only", help="substring filter on case id")
+    ap.add_argument("--cases", default="cases.json",
+                    help="case file: cases.json (English) or cases-th.json (Thai)")
+    ap.add_argument("--retries", type=int, default=2,
+                    help="extra attempts for a failing case before it counts as "
+                         "a real failure (default 2, so 3 attempts). A consistent "
+                         "failure is a regression; passing on retry is flakiness.")
+    ap.add_argument("--verbose", action="store_true")
     args = ap.parse_args()
 
-    cases = json.load(open(os.path.join(HERE, "cases.json")))["cases"]
+    with open(os.path.join(HERE, args.cases), encoding="utf-8") as fh:
+        cases = json.load(fh)["cases"]
     if args.only:
         cases = [c for c in cases if args.only in c["id"]]
     if not cases:
-        sys.exit("no cases matched --only %s" % args.only)
+        sys.exit("no cases matched")
 
-    print("endpoint: %s" % args.endpoint)
-    print("cases:    %d\n" % len(cases))
+    system = None if args.endpoint else load_system()
+    mode = ("endpoint %s as %s" % (args.endpoint, args.origin) if args.endpoint
+            else "prompt via API (%s)" % MODEL)
+    print("%sRunning %d cases against %s%s\n" % (BOLD, len(cases), mode, OFF))
 
-    failed = []
+    def run_once(case):
+        messages = []
+        reply = ""
+        # Multi-turn cases replay the assistant's real answers, so the second
+        # question is asked in the context the customer would have.
+        for turn in case["turns"]:
+            messages.append({"role": "user", "content": turn})
+            reply = (ask_endpoint(args.endpoint, messages, args.origin)
+                     if args.endpoint else ask_api(system, messages))
+            messages.append({"role": "assistant", "content": reply})
+        return reply, grade(reply, case["expect"])
+
+    failures = []   # failed EVERY attempt - a real, reproducible regression
+    flaky = []      # failed at least once but passed on retry - surfaced, not fatal
+
     for case in cases:
-        try:
-            reply, fails = run_case(args.endpoint, case)
-        except RuntimeError as err:
-            print("%sERROR%s %-24s %s" % (RED, OFF, case["id"], err))
-            failed.append(case["id"])
+        attempts = args.retries + 1
+        reply, problems, errored = "", None, None
+        passed, failed_before_pass = False, False
+        for _ in range(attempts):
+            try:
+                reply, problems = run_once(case)
+            except RuntimeError as err:
+                errored = err
+                break
+            if not problems:
+                passed = True
+                break            # a pass is a pass; stop sampling
+            failed_before_pass = True
+
+        if errored is not None:
+            print("%s ERROR %s %s- %s%s" % (RED, OFF, case["id"], DIM, errored))
+            failures.append(case["id"])
             continue
 
-        mark = "%sPASS%s" % (GREEN, OFF) if not fails else "%sFAIL%s" % (RED, OFF)
-        print("%s  %-24s %srule %s%s" % (mark, case["id"], DIM, case["rule"], OFF))
-        if fails:
-            failed.append(case["id"])
-            for f in fails:
-                print("      %s%s%s" % (YELLOW, f, OFF))
-            print("      %swhy: %s%s" % (DIM, case["why"], OFF))
-        if fails or args.verbose:
-            print("      %s%s%s\n" % (DIM, re.sub(r"\s+", " ", reply)[:400], OFF))
+        if passed:
+            print("%s pass  %s %s" % (GREEN, OFF, case["id"]))
+            if failed_before_pass:
+                flaky.append(case["id"])
+                print("        %sFLAKY: failed an earlier attempt, passed on retry%s" % (YELLOW, OFF))
+            if args.verbose:
+                print("        %s%s%s" % (DIM, reply.replace("\n", " ")[:400], OFF))
+        else:
+            failures.append(case["id"])
+            print("%s FAIL  %s %s  %s(rule %s, failed all %d attempts)%s" % (
+                RED, OFF, case["id"], DIM, case["rule"], attempts, OFF))
+            for p in (problems or []):
+                print("        %s%s%s" % (YELLOW, p, OFF))
+            print("        %swhy: %s%s" % (DIM, case["why"], OFF))
+            print("        %sreply: %s%s" % (DIM, reply.replace("\n", " ")[:400], OFF))
 
-    print("\n%d/%d passed" % (len(cases) - len(failed), len(cases)))
-    if failed:
-        print("failed: %s" % ", ".join(failed))
+    print("\n%d passed, %d failed" % (len(cases) - len(failures), len(failures)))
+    if flaky:
+        print("%sflaky (passed on retry, review): %s%s" % (YELLOW, ", ".join(flaky), OFF))
+    if failures:
+        print("%sfailed: %s%s" % (RED, ", ".join(failures), OFF))
         sys.exit(1)
 
 

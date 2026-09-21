@@ -1,0 +1,70 @@
+# Guardrail tests for the chat assistant.
+#
+# These run on every change to the rules, the knowledge base or the content that
+# feeds it. A failure is a blocked change, not a warning: the rules encode
+# business policy that the owner approved, and nothing else notices when an edit
+# quietly weakens one.
+#
+# The suite tests the PROMPT, not a deployment, so it needs no infrastructure -
+# only the ANTHROPIC_API_KEY secret. Cost is a few cents per run.
+#
+# Note what this gate does NOT do: it cannot tell you the live bot is safe.
+# Pushing updates the code; the live worker only changes when worker-standalone.js
+# is re-pasted into Cloudflare and deployed. Green CI plus an old deployment is
+# the normal way this goes wrong.
+
+name: Chatbot guardrail evals
+
+on:
+  push:
+    paths:
+      - "chatbot/**"
+      - "tools/build_kb.py"
+      - "tools/build_worker.py"
+      - "tools/build.py"
+      - ".github/workflows/chatbot-evals.yml"
+  pull_request:
+    paths:
+      - "chatbot/**"
+      - "tools/**"
+  workflow_dispatch:
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The knowledge base and both workers are generated. Rebuilding them here
+      # means an edit that breaks generation fails the build instead of silently
+      # shipping a knowledge base with a hole in it.
+      - name: Regenerate the knowledge base and the workers
+        run: |
+          python3 tools/build_kb.py
+          python3 tools/build_worker.py
+
+      - name: Fail if the committed generated files are stale
+        run: |
+          if ! git diff --quiet -- chatbot/knowledge-base.md chatbot/worker/src chatbot/worker/worker-standalone.js; then
+            echo "::error::Generated files are out of date. Run tools/build_kb.py && tools/build_worker.py and commit the result."
+            git --no-pager diff --stat -- chatbot/knowledge-base.md chatbot/worker/src chatbot/worker/worker-standalone.js
+            exit 1
+          fi
+
+      - name: Run guardrail evals (English)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 chatbot/evals/run.py
+
+      # Ari's customers include Thai speakers. A guardrail proven only in English
+      # is not proven: the rules are written in English and the model applies
+      # them to Thai input, which is exactly where an instruction can slip.
+      - name: Run guardrail evals (Thai)
+        if: always()
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 chatbot/evals/run.py --cases cases-th.json

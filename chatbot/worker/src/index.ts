@@ -56,21 +56,31 @@ function allowedOrigins(env: Env): string[] {
 }
 
 /**
- * Returns the CORS headers for this request, or null if the origin is not
- * allowed. A same-origin or non-browser request (no Origin header) is allowed
- * through with no CORS headers - curl and the eval runner need to work.
+ * Returns the CORS headers for this request, or null if the caller is not
+ * allowed.
+ *
+ * This control FAILS CLOSED. An unset or empty ALLOWED_ORIGINS refuses
+ * everything rather than accepting everything. The earlier version here did the
+ * opposite - it accepted any origin and logged a warning nobody reads - which
+ * meant a misconfigured deployment looked identical to a protected one from the
+ * dashboard. The control was specified but not in force, and only an external
+ * probe could tell the difference. That is the failure mode worth designing
+ * against: not a control that breaks, but one that is absent while appearing
+ * present.
+ *
+ * Be clear about what this does and does not do. It stops another WEBSITE from
+ * pointing its chat widget at this worker, because browsers send Origin and
+ * enforce the response. It does not stop a script, which can send any Origin it
+ * likes. The backstop for that is the spend cap on the API key.
  */
 function corsHeaders(request: Request, env: Env): Record<string, string> | null {
-  const origin = request.headers.get("Origin");
-  if (!origin) return {};
   const list = allowedOrigins(env);
-  // An unconfigured worker is open, so misconfiguration fails loudly in the
-  // logs rather than silently serving the whole internet.
   if (list.length === 0) {
-    console.warn("ALLOWED_ORIGINS is not set - accepting request from " + origin);
-    return { "Access-Control-Allow-Origin": origin, Vary: "Origin" };
+    console.error("ALLOWED_ORIGINS is not set - refusing all requests");
+    return null;
   }
-  if (!list.includes(origin)) return null;
+  const origin = request.headers.get("Origin");
+  if (!origin || !list.includes(origin)) return null;
   return { "Access-Control-Allow-Origin": origin, Vary: "Origin" };
 }
 
@@ -137,18 +147,28 @@ export default {
     if (url.pathname !== "/chat") return json({ error: "Not found." }, 404, cors);
     if (request.method !== "POST") return json({ error: "Use POST." }, 405, cors);
 
+    // Per-IP rate limiting, if the binding exists.
+    //
+    // Unlike the origin check this cannot fail closed: refusing all traffic
+    // when the limiter is missing is a self-inflicted outage, which is worse
+    // than the risk it defends. So it fails open - but LOUDLY, naming the
+    // control that is absent. A control that goes missing silently is the one
+    // discovered during the incident.
     if (env.RATE_LIMITER) {
       // CF-Connecting-IP is set by Cloudflare and cannot be spoofed by the
       // caller; it is the only identity we have for an anonymous widget.
       const key = request.headers.get("CF-Connecting-IP") ?? "unknown";
       const { success } = await env.RATE_LIMITER.limit({ key });
       if (!success) {
+        console.log(JSON.stringify({ ari_metric: "rate_limited" }));
         return json(
           { error: "You're sending messages faster than we can answer. Try again in a minute." },
           429,
           cors,
         );
       }
+    } else {
+      console.error("RATE_LIMITER binding is missing - requests are NOT rate limited");
     }
 
     let body: unknown;
@@ -160,6 +180,22 @@ export default {
 
     const messages = parseMessages(body);
     if (typeof messages === "string") return json({ error: messages }, 400, cors);
+
+    // Usage metric - privacy-safe by construction. A label, the turn number and
+    // a coarse language flag; NEVER any message text. turn === 1 marks a new
+    // conversation (a proxy for a person); every turn counts as engagement.
+    // This is the deliberate alternative to logging transcripts: it measures
+    // outcomes, not what anyone typed. Customers paste colleagues' allergies
+    // into this box - storing that is a privacy obligation the business is not
+    // set up to carry (RISKS.md R12).
+    try {
+      const last = messages[messages.length - 1].content;
+      console.log(JSON.stringify({
+        ari_metric: "chat",
+        turn: messages.filter((m) => m.role === "user").length,
+        lang: /[\u0E00-\u0E7F]/.test(last) ? "th" : "other",
+      }));
+    } catch { /* metrics must never break a reply */ }
 
     // Checked after validation so a misconfigured worker still reports a bad
     // request as a bad request: 4xx is about the caller, 5xx is about us.
