@@ -1155,13 +1155,18 @@ def build_privacy():
   <p>We use your information to reply to your enquiry, prepare a quote, organise and deliver your catering, and invoice you. We may contact you about your booking. We do not sell your information, and we do not add you to a marketing list without your consent.</p>
 
   <h2>Who else sees it</h2>
-  <p>Enquiries submitted through this site are delivered to our email inbox by a third-party form service. Our email provider and, where relevant, our accounting software also store your details. We ask these providers to keep your information secure, but they operate under their own privacy terms.</p>
+  <p>Enquiries submitted through this site are delivered to our email inbox by FormSubmit, a third-party form service. Everything you type into the form passes through their servers on the way to us &mdash; including any dietary requirements or allergy information you give us about yourself or your guests. Our email provider and, where relevant, our accounting software also store your details. We ask these providers to keep your information secure, but they operate under their own privacy terms.</p>
+  <p>If you would rather not use the form, email us directly at <a href="mailto:{EMAIL}">{EMAIL}</a>. It reaches the same inbox.</p>
 
   <h2>How long we keep it</h2>
   <p>We keep enquiry and booking records for as long as we need them to run the business and to meet Australian tax and record-keeping obligations, then delete them.</p>
 
   <h2>Your choices</h2>
   <p>You can ask us what information we hold about you, ask us to correct it, or ask us to delete it. Email <a href="mailto:{EMAIL}">{EMAIL}</a> and we&rsquo;ll respond as soon as we can. If you&rsquo;re not satisfied with how we&rsquo;ve handled a privacy matter, you can contact the Office of the Australian Information Commissioner at <a href="https://www.oaic.gov.au/" rel="noopener">oaic.gov.au</a>.</p>
+
+  <h2>The chat assistant</h2>
+  <p>If the chat assistant is switched on, what you type into it is sent to Anthropic&rsquo;s Claude API so a reply can be generated, and to nowhere else. We do not store the conversation: nothing you type is written to a database, a log or a file, and we cannot read it afterwards. We record only a count of conversations and messages, with no content attached, so we know whether it is being used.</p>
+  <p>The assistant cannot take a booking and cannot look up any record about you. Please do not type payment details or anyone&rsquo;s health information into it &mdash; send those to us by email instead.</p>
 
   <h2>Changes</h2>
   <p>If we change this policy we&rsquo;ll update the date at the top of this page.</p>
