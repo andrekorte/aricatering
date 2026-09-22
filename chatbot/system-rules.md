@@ -101,12 +101,15 @@ Resolved 21 Sep 2026 by the owner, on the questionnaire kept at
   is rule 12, and it is what the Thai suite tests. She is the Thai reader, so
   she reviews the Thai transcripts after the first real eval run.
 
-Still open, and neither blocks the build:
+Still open, and it does not block the build:
 
-1. **Which handover options were ticked (Q6).** Her answer was a pen mark
-   sitting between two options — "email and phone" or "email and the enquiry
-   form". Its position rules out "email only", which is what the assistant does
-   today. One word from her settles it.
-2. **Sunday trading hours.** She corrected Saturday to 10.00am–9.00pm on a line
+1. **Sunday trading hours.** She corrected Saturday to 10.00am–9.00pm on a line
    that covered Saturday and Sunday together, and named only Saturday. Sunday is
    left at 10.00am–6.00pm until she says otherwise.
+
+Resolved since:
+
+- **Q6, the handover: email only** (confirmed 22 Sep 2026). No change to the
+  assistant, which already gives the email address and nothing else — but see
+  the note in EVAL-LOG.md, because the pen mark had been measured as ruling
+  that option out, and the measurement was wrong.

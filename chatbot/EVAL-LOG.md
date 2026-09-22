@@ -145,3 +145,41 @@ likely option and record it as approved.
 
 Nothing has been executed against a model. The approval makes the rules
 authoritative; it does not make them effective. Run 1 remains the first real test.
+
+### Postscript to run 0b — Q6, and a measurement that was worse than useless
+
+The owner confirmed on 22 Sep 2026 that Q6 is **email only**. No change to the
+assistant; that is what it already does.
+
+The mark was a circle drawn around the **first** checkbox. Opening the document
+and looking at it shows this instantly. The report written above it said the
+mark sat "0.71 to 1.04 inches below the question paragraph, straddling the
+second and third options, which rules out email only" — two rows below where it
+actually was, and confidently backwards.
+
+**The error was not the arithmetic, it was the false precision.** The anchor
+offset was read from the XML; everything else — where the question paragraph
+ended, how tall a wrapped line was, how tall a table row was, whether the offset
+was measured from the paragraph's text or its spacing — was estimated. Five
+estimates were composed and the result was reported to two decimal places. Two
+decimal places is a claim about accuracy, and there was none behind it. "The
+mark is somewhere in the lower half of the question" would have been honest and
+about as useful; a figure in inches invited trust that nothing had earned.
+
+Two things follow, and the second is the one that generalises:
+
+1. **Look at the artefact.** The document could have been opened and read. The
+   render pipeline was broken in this environment, which became a reason to
+   infer instead of a reason to ask for a screenshot. Inference filled a gap
+   that a direct question would have closed in one message.
+2. **A derived number needs its error bars or it should not be a number.** The
+   decision to flag Q6 as unreadable was right, and it was reached despite the
+   measurement rather than because of it — the measurement said email-only was
+   ruled out, which was false, and had it been trusted one step further it would
+   have written a decision the owner never made into an approval record. A
+   wrong control value with a confident number attached is more dangerous than
+   an admitted gap, because a gap gets chased and a number gets used.
+
+The governance principle held: what cannot be read is reported as unread, and
+the owner is asked. The analysis supporting it was worthless, and pretending
+otherwise would make the next one look reliable.
