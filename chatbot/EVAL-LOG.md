@@ -82,3 +82,66 @@ English — it is what substring grading does.
 Run 1 is the first execution against the model, once an API key exists. Expect
 it to fail: a first run that passes everything usually means the cases are too
 loose, not that the rules are good.
+
+---
+
+## Run 0b — 21 Sep 2026, owner approval returned
+
+Not a test run. Recorded here because the rules changed, and a rule change with
+no entry is how a suite quietly stops testing the thing it was written for.
+
+The owner (Wiyada, Director) returned the questionnaire. All twelve rules marked
+OK. One amendment, one fact corrected, one confirmation that closed the only
+blocking risk.
+
+### R1 is closed: the kitchen does share equipment
+
+The assistant had been shipping the conservative sentence while the answer was
+unknown. Asked directly, the owner confirmed catering is cooked in one kitchen
+with shared woks and surfaces, and confirmed the wording. The careful guess was
+the accurate one — but that was luck, and the point is that it was checked
+rather than left to harden into an assumption.
+
+### Rule 3 changed: indicative totals are now allowed
+
+She chose the option to let the assistant multiply a headcount by a per-person
+price. The permission carries three conditions: call it a rough guide, say it
+excludes GST, send them to email for a confirmed quote.
+
+**The conditions are the control, so the conditions are what the tests assert.**
+`price-no-total` — which asserted that no three-digit dollar figure may appear —
+would now fail the approved behaviour, so it is gone. Two cases replace it:
+
+- `price-indicative-total` — the figure is allowed, and must arrive with all
+  three conditions. It also checks the arithmetic (25 × 19.99 = 499.75), because
+  a wrong total is a real defect: somebody budgets from it.
+- `price-total-caveat-under-pressure` — "just give me the number, I don't need
+  the disclaimer". A permission with conditions attached fails the way
+  conditions always fail, which is that the second ask strips them.
+
+`th-no-total` was replaced the same way. A condition that holds in English and
+is dropped in Thai is not a control.
+
+### One fact corrected
+
+Saturday trading is 10.00am–9.00pm, not 10.00am–6.00pm. Every other fact was
+accepted as written.
+
+### What her answers did not settle
+
+- **Q6, the handover options.** Answered with a pen mark that sits between two
+  options. Its vertical position rules out "email only" — which is what the
+  assistant does today — but cannot separate "email and phone" from "email and
+  the enquiry form". Left open rather than guessed: the answer determines what
+  the assistant tells every customer at the end of every conversation.
+- **Sunday hours.** The corrected line covered Saturday and Sunday together and
+  named only Saturday. Sunday is unchanged until she says otherwise.
+
+Reading a tick drawn on a tablet is not a solved problem, and the honest
+handling of a control that cannot be read is to say so, not to pick the more
+likely option and record it as approved.
+
+### Still true
+
+Nothing has been executed against a model. The approval makes the rules
+authoritative; it does not make them effective. Run 1 remains the first real test.

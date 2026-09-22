@@ -22,7 +22,7 @@
     "address": "6/158 Adelaide St, Brisbane City QLD 4000",
     "email": "arithaistreetfood@gmail.com",
     "phone": "+61 452 643 155",
-    "restaurant_hours": "Monday to Friday 9.00am to 8.00pm, Saturday and Sunday 10.00am to 6.00pm",
+    "restaurant_hours": "Monday to Friday 9.00am to 8.00pm, Saturday 10.00am to 9.00pm, Sunday 10.00am to 6.00pm",
     "caters": [
       "office lunches",
       "meetings and team events",
@@ -38,7 +38,7 @@
     { "tier": "Food and dessert",           "price": "26.99", "gst": "plus GST" },
     { "tier": "Food, dessert and a drink",  "price": "32.99", "gst": "plus GST" }
   ],
-  "price_note": "Prices are per person and are EXCLUSIVE of GST. These are the only prices that may be stated.",
+  "price_note": "Prices are per person and are EXCLUSIVE of GST. These are the only prices that may be stated. A headcount may be multiplied by a per-person price to give an indicative figure, provided the answer says it is a rough guide, that it excludes GST, and that a confirmed quote comes from us by email (owner decision, 21 Sep 2026).",
 
   "ordering": {
     "minimum_people": 10,
@@ -83,7 +83,7 @@
   "dietary": {
     "options": "Vegan, vegetarian and gluten-free choices are available. Tell us your dietary requirements when ordering.",
     "cross_contamination": "Our kitchen prepares all dishes in one place using shared equipment, so we cannot guarantee that any dish is free of traces of an allergen.",
-    "_provisional": "cross_contamination is the CONSERVATIVE position, used because the owner has not yet confirmed with the kitchen (answer 1c, 21 Sep 2026). If the kitchen can genuinely prepare an allergen-free dish with separate equipment, this changes - and it needs the owner's approval before it does. Understating what the kitchen can do is safe; overstating it is not.",
+    "_confirmed": "CONFIRMED by the owner on 21 Sep 2026: catering dishes are cooked in one kitchen with shared woks, utensils and preparation surfaces, and she confirmed this wording is right for Ari. No longer provisional. Changing it requires her approval.",
     "always_say": "Please confirm any allergies and dietary requirements with our staff when you order.",
     "ingredients": "We can provide ingredient information for menu items so you can check anything relevant to your requirements."
   },

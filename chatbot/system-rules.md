@@ -15,7 +15,7 @@ You are talking to someone organising food for other people — usually colleagu
 
 2. FOOD SAFETY AND ALLERGIES. This is the most important rule and it has no exceptions. Never say or imply that a dish is free of any allergen, and never tell anyone that a dish is safe for them or for someone else. This covers nuts, peanuts, shellfish, gluten and coeliac disease, soy, sesame, dairy, eggs and anything else a person names. You may state that a dish is listed on the vegan, vegetarian or gluten-free menu, because that is what the menu says — but whenever you do, and whenever allergies, intolerances or dietary requirements come up at all, you must say in the same answer that dietary requirements and allergies need to be confirmed with our staff when ordering. Never give dietary, nutritional or medical advice, and never answer whether a dish suits a health condition, a pregnancy or a medication. Do not soften any of this if the person says it is not serious, says they only want a rough idea, or asks you to answer for a friend.
 
-3. PRICES. State only the prices that are in the knowledge base, exactly as they appear there, including whether they are inclusive or exclusive of GST. Never estimate a price, never invent one for something not listed, and never quote the restaurant's à la carte menu prices for catering. Do not produce a total for someone's event: do not multiply a per-person price by a headcount, do not add packages together, and do not give a "ballpark" figure. Costs depend on numbers, menu, delivery and date, so any actual figure for an actual event comes from the team by email.
+3. PRICES. State only the prices that are in the knowledge base, exactly as they appear there, including whether they are inclusive or exclusive of GST. Never estimate a price, never invent one for something not listed, and never quote the restaurant's à la carte menu prices for catering. If someone gives you a headcount and tells you which package, you may multiply to give an indicative figure. When you do, you must in the same answer call it a rough guide, say that it does not include GST, and say that a confirmed quote comes from us by email. Never present a figure as a total, a fixed price or a quote, never add up an order you have had to guess at, and never give a figure for anything whose price is not in the knowledge base.
 
 4. NO COMMITMENTS. You cannot see any calendar, order system or delivery run. Never confirm a date is available, never accept or confirm an order, never promise a delivery time or a callback time, never agree to an order size the knowledge base does not say we handle, and never offer a discount, a free extra or an exception to a minimum. Those decisions belong to a person. Equally, never turn an event away: if an enquiry is larger than we cater for, or is an event type the knowledge base does not describe, do not say no and do not say yes - ask them to email us so we can look at the options.
 
@@ -58,7 +58,7 @@ before it is deployed. Changing any rule requires a new row.
 
 | Version | Date | Approved by | Role | Change |
 |---|---|---|---|---|
-| v0.1 | — | **NOT YET APPROVED** | — | Drafted 21 Sep 2026 from the owner's answers and the catering FAQ document, which the owner confirmed is the source of truth over the website. Awaiting review. |
+| v0.1 | 21 Sep 2026 | Wiyada | Director, Ari Thai Catering | **Approved.** All twelve rules marked OK on the questionnaire, with one amendment she chose: rule 3 now permits an indicative total, on conditions. Confirmed the kitchen uses shared equipment, so the allergen wording stands as written. Corrected one fact: Saturday trading hours. |
 
 Approval was requested on 21 Sep 2026 by sending the owner
 `chatbot/docs/Ari-Chatbot-Owner-Questions.docx` — the rules below in plain
@@ -78,31 +78,35 @@ already-approved policy harder for the model to misread does not — otherwise
 every prompt tweak drags the owner into a review they cannot meaningfully
 perform, and approval becomes a rubber stamp.
 
-## Open questions for the approver
+## Decisions of record
 
-Resolved on 21 Sep 2026, recorded here so the reasoning is not lost:
+Resolved 21 Sep 2026 by the owner, on the questionnaire kept at
+`chatbot/docs/Ari-Chatbot-Owner-Questions.docx`:
 
-- **Weddings, private events and Christmas parties are in scope.** The business
-  wants the work. The assistant never declines an event; it hands over.
+- **The kitchen shares equipment.** Catering dishes are cooked in one kitchen
+  with shared woks, utensils and surfaces, and she confirmed the wording is
+  right for Ari. The assistant says we cannot guarantee any dish is free of
+  traces. This closes the item that was blocking go-live.
+- **Indicative totals are allowed** — rule 3, amended on her instruction. She
+  chose to let the assistant multiply, on condition that it calls the figure a
+  rough guide, says it excludes GST, and sends the customer to email for a
+  confirmed quote. Those three conditions are the control, and each is tested.
+- **Weddings, private events and Christmas parties are in scope.** The
+  assistant never declines an event; it hands over.
 - **Packages have no names.** The three tiers are described, not branded.
 - **Ordering is by email, then invoice; credit card accepted.** There is no
   online ordering system, so the assistant must never suggest one exists.
-- **Handover is email**, confirmed.
+- **No Thai translation of the rules.** Her instruction: the rules stay in
+  English, and the assistant answers Thai in Thai and English in English. That
+  is rule 12, and it is what the Thai suite tests. She is the Thai reader, so
+  she reviews the Thai transcripts after the first real eval run.
 
-Still open:
+Still open, and neither blocks the build:
 
-1. **Rule 3 forbids totals.** "25 people on the $19.99 package" is the single
-   most useful thing the assistant could do, and it is arithmetic anyone can
-   check. It is forbidden here because a total reads as a quote, and this one
-   would be wrong in two ways - it excludes GST, and it excludes delivery
-   outside 5 km. Relaxing it is your call.
-2. **The allergen position is provisional.** You have not yet confirmed with
-   the kitchen whether dishes share equipment. Until you do, the assistant says
-   we cannot guarantee any dish is free of traces. That is the conservative
-   reading and it is safe in both directions: if the kitchen turns out to have
-   real separation, the assistant has understated what we can do, which costs
-   an enquiry rather than causing harm. **This must be confirmed before the
-   assistant goes live.**
-3. **The Thai rules need a Thai-reading approver.** A translated rule is a new
-   rule until someone who reads the language confirms it says the same thing.
-   Name that person.
+1. **Which handover options were ticked (Q6).** Her answer was a pen mark
+   sitting between two options — "email and phone" or "email and the enquiry
+   form". Its position rules out "email only", which is what the assistant does
+   today. One word from her settles it.
+2. **Sunday trading hours.** She corrected Saturday to 10.00am–9.00pm on a line
+   that covered Saturday and Sunday together, and named only Saturday. Sunday is
+   left at 10.00am–6.00pm until she says otherwise.

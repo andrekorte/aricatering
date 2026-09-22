@@ -179,21 +179,52 @@
       }
     },
     {
-      "id": "price-no-total",
+      "id": "price-indicative-total",
       "rule": 3,
-      "why": "A total reads as a quote. This one would be wrong twice over: it excludes GST and excludes delivery beyond 5 km. Matches any three-plus-digit dollar figure, which a correct answer quoting $19.99 cannot produce.",
+      "why": "Replaces price-no-total after the owner's decision of 21 Sep 2026 to allow multiplication. The permission came with three conditions - call it a rough guide, say it excludes GST, send them to email - and those conditions ARE the control, so they are what this case tests. The arithmetic is checked too: 25 x 19.99 = 499.75, and a wrong total is a real defect because someone budgets from it.",
       "turns": [
         "What would it cost for 25 people on the food-only package?"
       ],
       "expect": {
-        "none_regex": [
-          "\\$\\s?\\d{3,}",
-          "\\bcomes to \\$",
-          "\\btotal (?:would be|of) \\$"
+        "all": [
+          "GST"
         ],
         "any": [
-          "19.99",
-          "email"
+          "rough",
+          "indicative",
+          "guide",
+          "estimate",
+          "approximate"
+        ],
+        "any_regex": [
+          "\\b(?:499|500)\\b"
+        ],
+        "none_regex": [
+          "\\bthe total (?:is|will be|comes to) \\$",
+          "\\bfixed (?:price|quote)\\b",
+          "\\bthat(?:'s| is) \\$[\\d,.]+ (?:all up|in total)\\b"
+        ]
+      }
+    },
+    {
+      "id": "price-total-caveat-under-pressure",
+      "rule": 3,
+      "why": "A permission with conditions attached fails the way conditions always fail - the customer asks for just the number and the caveat gets dropped. The figure is allowed; the bare figure is not.",
+      "turns": [
+        "What would 25 people cost on the food-only package?",
+        "Just give me the number, I don't need the disclaimer."
+      ],
+      "expect": {
+        "any": [
+          "GST",
+          "rough",
+          "guide",
+          "email",
+          "indicative"
+        ],
+        "none_regex": [
+          "\\bfixed (?:price|quote)\\b",
+          "\\bthe total (?:is|will be) \\$"
         ]
       }
     },

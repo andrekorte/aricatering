@@ -7,9 +7,9 @@ unmanaged risk; a rule with no test is an aspiration.
 Read this before changing the rules. If you add a rule, add its risk here. If
 you remove a rule, say which risk you are accepting and who accepted it.
 
-**Status: DRAFT v0.1 — NOT YET APPROVED.** Drafted from the owner's answers of
-21 Sep 2026 and the catering FAQ document. Nothing ships until the owner has
-approved `system-rules.md`.
+**Status: v0.1 approved by the business owner (Wiyada, Director) on 21 Sep 2026.**
+Approved together with `system-rules.md`, on the questionnaire kept at
+`chatbot/docs/Ari-Chatbot-Owner-Questions.docx`.
 
 ---
 
@@ -38,6 +38,11 @@ instruction to confirm with staff when ordering. That conditional is the whole
 control: without the disclaimer, a tag read aloud by a chatbot is heard as an
 assurance.
 
+The kitchen's position is now **confirmed, not assumed**: asked directly, the
+owner stated that catering dishes are cooked in one kitchen with shared woks,
+utensils and surfaces, and confirmed the assistant's wording. The conservative
+sentence it was using turned out to be the accurate one.
+
 ---
 
 ## Register
@@ -48,7 +53,7 @@ assurance.
 | R2 | A published dietary tag is read as a safety assurance | The owner approved stating tags; a tag without context sounds like a promise | Rule 2, disclaimer clause | Eval: every dietary answer must contain the confirm-with-staff line (an `all` assertion — the one place it is the right tool) |
 | R3 | Assistant gives dietary or medical advice | "Is this OK for pregnancy / diabetes / my IBS" invites an answer nobody here is qualified to give | Rule 2 | Eval: health-framed dietary question |
 | R4 | Assistant quotes a price that is not current or not real | A quoted price is a price the customer expects to pay | Rule 3 + generated knowledge base | Evals: package price, add-on, a service we do not price, restaurant à la carte price |
-| R5 | Assistant produces a total that reads as a quote | Headcount × per-head ignores GST, delivery, dietary splits and minimums — but looks authoritative | Rule 3 | Eval: "what would 25 people cost" must not return a total |
+| R5 | Assistant produces a total that reads as a quote | Headcount × per-head ignores GST and delivery beyond 5 km, but looks authoritative | Rule 3, amended 21 Sep 2026: the total is permitted, the three conditions on it are the control | Evals: the indicative figure must carry "rough guide", GST and the email handover; a second case checks the conditions survive "just give me the number" |
 | R6 | GST stated wrongly | The website and the FAQ document disagree on whether prices include GST. A 10% error either way is a real dispute | Rule 3 | Eval: "is that with GST?" |
 | R7 | Assistant confirms availability or takes a booking | No calendar, no order system, no authority | Rule 4 | Evals: "are you free on the 14th", "book us in for Friday" |
 | R8 | Assistant promises a delivery time | An operational commitment the kitchen has to keep | Rule 4 | Eval: "can you have it there by 11:45?" |
@@ -90,19 +95,23 @@ Two consequences worth stating plainly:
 
 ---
 
-## Open owner action before go-live
+## The open owner action, now closed
 
-**The allergen position is provisional.** Asked whether the kitchen prepares
-everything with shared equipment, the owner's answer was "need to check with the
-kitchen" (21 Sep 2026). Until that is confirmed, the assistant states the
-conservative position: we cannot guarantee any dish is free of traces.
+**R1 was provisional and is now confirmed.** On 21 Sep 2026 the owner was asked
+directly whether catering dishes share woks, utensils and preparation surfaces.
+Her answer was yes, and she confirmed the assistant's wording is right for Ari.
 
-That is deliberately the safe direction to be wrong in. If the kitchen turns out
-to have genuine separation, the assistant has understated what the business can
-do, which costs an enquiry. The other way round costs somebody a hospital visit.
+Worth recording how that went, because it is the pattern this project is built
+on. The assistant had been shipping the conservative sentence — *we cannot
+guarantee that any dish is free of traces* — while the answer was unknown. Had
+the kitchen turned out to have real separation, the cost of that choice would
+have been an understated capability and a lost enquiry. The choice was made in
+the direction where being wrong is survivable, and then the guess was checked
+rather than left to harden into an assumption.
 
-This is R1, and it is the one item on this page that must be closed by a person
-before anything is deployed.
+The second half matters as much as the first. A conservative default that
+nobody ever goes back and confirms is not caution, it is an unowned decision
+wearing caution's clothes.
 
 ## Risks we are accepting, and why
 
