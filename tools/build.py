@@ -12,12 +12,19 @@ Business name / domain live in site.config.json; use tools/rebrand.py to
 change them across the whole site in one go.
 """
 
+import datetime
 import json
 import os
 import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CFG = json.load(open(os.path.join(ROOT, "site.config.json")))
+
+# The catering facts the owner approved. The website and the chat assistant are
+# both generated from this file, which is the whole point: a price can only be
+# changed in one place, and the page cannot end up saying something the
+# assistant contradicts.
+FACTS = json.load(open(os.path.join(ROOT, "catering-facts.json")))
 
 NAME = CFG["business_name"]
 SHORT = CFG["short_name"]
@@ -29,6 +36,27 @@ ADDRESS = CFG["address"]
 FORM_ENDPOINT = CFG["form_endpoint"]
 
 YEAR = CFG["copyright_year"]
+
+# Contact details live in site.config.json and are repeated in the facts file
+# so that it reads as a standalone document. Repeated data drifts, so the build
+# refuses to run when they disagree rather than quietly shipping two answers.
+for _key, _ours in (("email", EMAIL), ("phone", PHONE), ("address", ADDRESS)):
+    _theirs = FACTS["business"][_key]
+    if _theirs != _ours:
+        raise SystemExit(
+            "site.config.json and catering-facts.json disagree on %s:\n"
+            "  site.config.json:     %s\n"
+            "  catering-facts.json:  %s\n"
+            "Fix one of them - the assistant and the website must say the same thing."
+            % (_key, _ours, _theirs))
+
+TIERS = FACTS["packages"]
+ORDERING = FACTS["ordering"]
+DELIVERY = FACTS["delivery"]
+FOOD = FACTS["food"]
+DIETARY = FACTS["dietary"]
+HOURS = FACTS["business"]["restaurant_hours"]
+LOW_PRICE = min(t["price"] for t in TIERS)
 
 # The chat widget only ships once there is somewhere for it to talk to. Empty
 # endpoint (the default) means no script tag, no launcher, no extra bytes -
@@ -141,7 +169,7 @@ FOOTER = """<footer class="site-footer">
           <li><a href="tel:{PHONE_HREF}">{PHONE}</a></li>
           <li><a href="mailto:{EMAIL}">{EMAIL}</a></li>
           <li>{ADDRESS}</li>
-          <li>Enquiries answered within one business day</li>
+          <li>Catering enquiries by email</li>
         </ul>
       </div>
       <div>
@@ -150,7 +178,7 @@ FOOTER = """<footer class="site-footer">
         <ul class="footer-links">
           <li><a href="https://ari-thaistreetfood.com/">ari-thaistreetfood.com</a></li>
           <li>Mon&ndash;Fri 9.00am&ndash;8.00pm</li>
-          <li>Sat&ndash;Sun 10.00am&ndash;6.00pm</li>
+          <li>Sat 10.00am&ndash;9.00pm &middot; Sun 10.00am&ndash;6.00pm</li>
         </ul>
       </div>
     </div>
@@ -180,13 +208,23 @@ SCHEMA = json.dumps({
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     "name": NAME,
-    "description": "Thai street food catering for offices, meetings and staff events across Brisbane.",
+    "description": "Thai catering in Brisbane for office lunches, meetings, corporate functions, Christmas parties, weddings and private events. From $19.99 per person plus GST, minimum 10 people.",
+    "alternateName": ["Ari Thai Street Food Catering", "Ari Thai Street Food", "Ari Catering Brisbane"],
     "url": "https://%s/" % DOMAIN,
     "telephone": PHONE,
     "email": EMAIL,
     "image": "https://%s/assets/img/brand/pad-kra-pow-hero.jpg" % DOMAIN,
     "servesCuisine": "Thai",
     "priceRange": "$$",
+    "parentOrganization": {"@type": "Restaurant", "name": "Ari - Thai Street Food",
+                           "url": "https://ari-thaistreetfood.com/"},
+    "makesOffer": [
+        {"@type": "Offer", "name": t["tier"],
+         "price": t["price"], "priceCurrency": "AUD",
+         "description": "Thai catering, per person, %s. Minimum 10 people." % t["gst"]}
+        for t in FACTS["packages"]
+    ],
+    "areaServed": {"@type": "City", "name": "Brisbane"},
     "areaServed": {"@type": "City", "name": "Brisbane"},
     "address": {
         "@type": "PostalAddress",
@@ -199,9 +237,25 @@ SCHEMA = json.dumps({
 }, indent=2)
 
 
-def page(path, title, description, body, active, og_image="/assets/img/brand/pad-kra-pow-hero.jpg", schema=False):
+FAQ_SCHEMA = json.dumps({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+        {"@type": "Question", "name": q,
+         "acceptedAnswer": {"@type": "Answer", "text": a}}
+        for q, a in FACTS["faqs"]
+    ],
+}, indent=2)
+
+
+def page(path, title, description, body, active, og_image="/assets/img/brand/pad-kra-pow-hero.jpg", schema=False, faq=False):
     canonical = "https://%s%s" % (DOMAIN, path if path.endswith("/") else path)
     head_schema = '\n<script type="application/ld+json">\n%s\n</script>' % SCHEMA if schema else ""
+    # Marking up the FAQ lets the answers appear directly in search results,
+    # and it is generated from the owner-approved facts - so what Google shows
+    # and what the assistant says come from one source.
+    if faq:
+        head_schema += '\n<script type="application/ld+json">\n%s\n</script>' % FAQ_SCHEMA
     html = """<!doctype html>
 <html lang="en-AU">
 <head>
@@ -290,132 +344,75 @@ def reviews_block():
 
 CTA_BAND = """<section class="section cta-band">
   <div class="container">
-    <span class="eyebrow">Feed the team</span>
-    <h2>Tell us the date and the headcount</h2>
-    <p class="lede">Send us your brief and we&rsquo;ll come back with a menu and a fixed, all-inclusive quote within one business day. No obligation.</p>
+    <span class="eyebrow">Feed the room</span>
+    <h2>Tell us the date and the numbers</h2>
+    <p class="lede">Email us the date, how many people and where it is going, and we&rsquo;ll come back with the options. No obligation.</p>
     <div class="btn-row">
       <a class="btn btn--primary" href="/enquiry/">Get a quote</a>
       <a class="btn btn--ghost" href="tel:{PHONE_HREF}">Call {PHONE}</a>
     </div>
-    <p class="cta-band__note">Minimum 10 guests &middot; 24 hours&rsquo; notice &middot; Delivering across Brisbane CBD and inner suburbs</p>
+    <p class="cta-band__note">Minimum 10 people &middot; 48 hours&rsquo; notice &middot; Free delivery within 5&nbsp;km of the Brisbane CBD</p>
   </div>
 </section>""".replace("{PHONE_HREF}", PHONE_HREF).replace("{PHONE}", PHONE)
 
 
-PACKAGES = [
-    {
-        "name": "Street Lunch",
-        "for": "Everyday team lunches and working meetings",
-        "price": "24",
-        "min": "Minimum 10 guests &middot; drop-off",
-        "featured": False,
-        "includes": [
-            "<strong>2 mains</strong> from the catering menu",
-            "Steamed jasmine rice",
-            "Fresh Thai side salad",
-            "Vegan and gluten-free versions at no extra cost",
-            "Serving tongs, plates, napkins and cutlery",
-            "Delivered hot and ready to serve",
-        ],
-    },
-    {
-        "name": "Ari Banquet",
-        "for": "Client lunches, board meetings and team celebrations",
-        "price": "34",
-        "min": "Minimum 15 guests &middot; drop-off with setup",
-        "featured": True,
-        "includes": [
-            "<strong>3 mains</strong> from the catering menu",
-            "<strong>Entr&eacute;e platter</strong> &mdash; Moo Ping pork skewers, spring rolls and Thai fish cakes",
-            "Chef&rsquo;s curry of the day",
-            "Steamed jasmine rice and fresh Thai side salad",
-            "Mango sticky rice to finish",
-            "Chafing dishes to keep everything hot",
-            "We set the buffet up on arrival",
-        ],
-    },
-    {
-        "name": "Street Feast",
-        "for": "Conferences, launches and end-of-year events",
-        "price": "46",
-        "min": "Minimum 20 guests &middot; staffed service",
-        "featured": False,
-        "includes": [
-            "<strong>4 mains</strong> plus a signature noodle dish",
-            "<strong>2 entr&eacute;e platters</strong> and a Thai snack grazing board",
-            "Chef&rsquo;s curry of the day",
-            "Steamed jasmine rice and fresh Thai side salad",
-            "Mango sticky rice to finish",
-            "Ari&rsquo;s Thai iced tea station &mdash; Thai milk tea, lemon tea and O-Liang",
-            "Full setup, staffed service and pack-down",
-        ],
-    },
-]
+def esc(t):
+    """Facts are stored as plain text; the site is HTML."""
+    return (t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+             .replace("'", "&rsquo;"))
+
+
+# What each tier gets you. The tiers are deliberately unnamed - the owner's
+# decision of 21 Sep 2026 - so the description IS the name.
+TIER_DETAIL = {
+    "Food only": ["A Thai rice meal for every guest", "Choice of dishes across the group"],
+    "Food and dessert": ["A Thai rice meal for every guest", "Choice of dishes across the group",
+                         "Dessert included"],
+    "Food, dessert and a drink": ["A Thai rice meal for every guest",
+                                  "Choice of dishes across the group",
+                                  "Dessert included", "A drink included"],
+}
 
 
 def package_cards(cta="/enquiry/", cta_label="Get a quote"):
     out = []
-    for p in PACKAGES:
-        flag = '<span class="pkg__flag">Most popular</span>' if p["featured"] else ""
-        cls = "pkg pkg--featured" if p["featured"] else "pkg"
-        btn = "btn--dark" if p["featured"] else "btn--ghost on-light"
-        items = "".join(
-            '<li>%s <span>%s</span></li>' % (ICON["check"], i) for i in p["includes"]
-        )
+    for i, t in enumerate(TIERS):
+        featured = (i == 1)
+        flag = '<span class="pkg__flag">Most popular</span>' if featured else ""
+        cls = "pkg pkg--featured" if featured else "pkg"
+        btn = "btn--dark" if featured else "btn--ghost on-light"
+        items = "".join('<li>%s <span>%s</span></li>' % (ICON["check"], esc(x))
+                        for x in TIER_DETAIL[t["tier"]])
         out.append("""      <article class="{CLS}">
         {FLAG}
         <h3 class="pkg__name">{PNAME}</h3>
         <p class="pkg__for">{PFOR}</p>
-        <p class="pkg__price"><span class="pkg__from">From</span><span class="pkg__amount">${PRICE}</span><span class="pkg__unit">per person</span></p>
-        <p class="pkg__min">{PMIN}</p>
+        <p class="pkg__price"><span class="pkg__from">From</span><span class="pkg__amount">${PRICE}</span><span class="pkg__unit">per person + GST</span></p>
+        <p class="pkg__min">Minimum {MIN} people &middot; {NOTICE} hours&rsquo; notice</p>
         <ul class="pkg__list">{ITEMS}</ul>
         <a class="btn {BTN} btn--block" href="{CTA}">{CTA_LABEL}</a>
       </article>""".replace("{CLS}", cls).replace("{FLAG}", flag)
-                   .replace("{PNAME}", p["name"]).replace("{PFOR}", p["for"])
-                   .replace("{PRICE}", p["price"]).replace("{PMIN}", p["min"])
+                   .replace("{PNAME}", esc(t["tier"])).replace("{PFOR}", "Per guest, delivered")
+                   .replace("{PRICE}", t["price"]).replace("{MIN}", str(ORDERING["minimum_people"]))
+                   .replace("{NOTICE}", str(ORDERING["notice_hours"]))
                    .replace("{ITEMS}", items).replace("{BTN}", btn)
                    .replace("{CTA}", cta).replace("{CTA_LABEL}", cta_label))
     return '<div class="pkg-grid">\n%s\n    </div>' % "\n".join(out)
 
 
 ALWAYS_INCLUDED = [
-    "Delivery into Brisbane CBD and inner suburbs",
-    "Chafing dishes or insulated carriers so food arrives hot",
-    "Serving tongs and spoons for every dish",
-    "Plates, bowls, napkins and cutlery",
-    "Vegan and gluten-free dishes at no surcharge, labelled separately",
-    "Menu cards listing every dish and its dietary tags",
-    "One tax invoice, PO number included if you need it",
+    "Individually packed meals, or shared-style for the group &mdash; your choice",
+    "Mixed menu choices within one order",
+    "Vegan, vegetarian and gluten-free choices available",
+    "Free delivery within 5&nbsp;km of the Brisbane CBD for 10 or more",
+    "Delivered about 30 minutes before your event starts",
+    "Delivery to reception, a meeting room or wherever you nominate",
+    "A tax invoice for your finance team",
 ]
 
-# Optional extras, priced on top of a package. Kept at module level (rather
-# than inside build_packages) because tools/build_kb.py reads them to build the
-# chatbot's knowledge base - the bot and the packages page quote one list.
-ADDONS = [
-    ("Entr&eacute;e platter &mdash; Moo Ping skewers, spring rolls, Thai fish cakes", "$9 per person"),
-    ("Thai snack grazing board &mdash; crispy pork crackers, jerky, Nam Prik dips", "$11 per person"),
-    ("Mango sticky rice", "$7 per person"),
-    ("Ari&rsquo;s Thai iced tea station &mdash; milk tea, lemon tea, O-Liang", "$6 per person"),
-    ("Extra main added to any package", "$8 per person"),
-    ("Extra steamed jasmine rice", "$3 per person"),
-    ("Staffed service &mdash; one server, up to 3 hours", "$220 per server"),
-    ("Delivery beyond Brisbane CBD and inner suburbs", "Quoted per event"),
-]
-
-FAQS = [
-    ("How much notice do you need?",
-     "<p>24 hours for the Street Lunch package, and 48 hours for Banquet and Street Feast so we can prep the entr&eacute;es and desserts. If you&rsquo;re in a bind, call us &mdash; we can often make same-day work for smaller groups.</p>"),
-    ("What is the minimum order?",
-     "<p>10 guests for Street Lunch, 15 for Ari Banquet and 20 for Street Feast. Below 10 people you&rsquo;re usually better off ordering direct from the restaurant &mdash; happy to point you there.</p>"),
-    ("Do you deliver outside the CBD?",
-     "<p>Delivery into Brisbane CBD and the inner suburbs is included in the per-person price. Further out we&rsquo;ll quote the delivery separately &mdash; just put the address on the enquiry form.</p>"),
-    ("How do you handle allergies?",
-     "<p>Tell us on the enquiry form and we&rsquo;ll build the menu around it. Dietary dishes are cooked separately and labelled clearly on delivery. Please note our kitchen handles nuts, shellfish, gluten, soy and sesame, so we can&rsquo;t guarantee a dish is free of traces.</p>"),
-    ("Can we get an invoice for the finance team?",
-     "<p>Yes. We invoice with an ABN and can quote against a purchase order number. Add the PO number to the notes field and it will appear on the invoice.</p>"),
-    ("What if our numbers change?",
-     "<p>Final numbers are due 48 hours before delivery. Small increases after that are usually fine &mdash; call and we&rsquo;ll do what we can.</p>"),
-]
+# The owner's FAQ, verbatim. Same source as the chat assistant's knowledge
+# base, so the page and the assistant answer every question identically.
+FAQS = [(esc(q), "<p>%s</p>" % esc(a)) for q, a in FACTS["faqs"]]
 
 
 # --------------------------------------------------------------------------
@@ -449,93 +446,49 @@ def gallery_section():
 # Which restaurant categories become catering menu sections, and how they are
 # framed for a corporate buyer. Retail prices are deliberately not shown:
 # catering is sold per person, by package.
-MENU_SECTIONS = [
-    ("mains", "Mains &amp; stir-fries", ["ala-carte"],
-     "Wok-tossed to order. Choose your mains by package &mdash; two for Street Lunch, three for Banquet, four for Street Feast.", None),
-    ("entrees", "Entr&eacute;es &amp; skewers", ["entree"],
-     "Served on platters for the table. Included in the Banquet and Street Feast packages, or add to any order.",
-     ["Moo Ping &ndash; Pork Skewers", "Chicken Dim Sim (1 pc)", "Sour Pork (1 pc)", "Chicken Wing Zap"]),
-    ("vegan", "Vegan mains", ["vegan"],
-     "Every package can be built fully vegan &mdash; no surcharge, no separate order.", None),
-    ("gluten-free", "Gluten-free mains", ["gluten-free"],
-     "Prepared with gluten-free sauces and labelled separately on delivery.", None),
-    ("drinks", "Ari&rsquo;s Thai drinks", ["aris-drinks"],
-     "Our iced tea station, brewed the Bangkok way. Add to any package.", None),
-]
+# The catering menu is no longer the restaurant's 56-dish a la carte list. The
+# owner's FAQ describes catering as Thai rice meals with one or two choices, so
+# that is what the site says. assets/menu-data.json is still used for the dish
+# photography; it is no longer a source of truth about what we cater.
 
-SKIP_ITEMS = {"Cup of Ice", "Jasmine Rice", "Sticky Rice"}
-
-VEG_TAG = {"vegan": ("V", "tag--v"), "gluten-free": ("GF", "tag--gf")}
-HOT = re.compile(r"spicy|chil[li]?|kra pow|ka praw|tom yum|kee mao|zap|jaew", re.I)
+# Photos are matched to dishes EXPLICITLY. Fuzzy matching against the
+# restaurant's menu put the wrong curry under the wrong name, and a mislabelled
+# photo of food is the sort of small dishonesty this project exists to avoid.
+# Massaman and green curry have no photograph in the restaurant's data, so they
+# render without one rather than borrowing a picture of something else.
+DISH_PHOTOS = {
+    "Pad Kra Pao with chicken or pork": "NXHAYHKHN0Z4W",
+    "Fried rice": "FSV8BJ4P64JQT",
+    "Tom Yum fried rice": "5PC7704WZNG10",
+}
 
 
-def dish_tile(item, slug):
-    tags = []
-    if slug in VEG_TAG:
-        label, cls = VEG_TAG[slug]
-        tags.append('<span class="tag %s">%s</span>' % (cls, label))
-    if HOT.search(item["name"]):
-        tags.append('<span class="tag tag--hot">Spicy</span>')
+def dish_cards():
+    out = []
+    # Dishes that have a photograph lead the grid; the two without one would
+    # otherwise open the page with a pair of empty-looking cards.
+    ordered = sorted(FOOD["popular_dishes"], key=lambda n: n not in DISH_PHOTOS)
+    for name in ordered:
+        dish_id = DISH_PHOTOS.get(name)
+        path = os.path.join(ROOT, "assets", "img", "dishes", "%s.jpg" % dish_id) if dish_id else ""
+        media = ""
+        if dish_id and os.path.exists(path):
+            media = ('<img src="/assets/img/dishes/%s.jpg" alt="%s, cooked to order for catering" '
+                     'width="600" height="600" loading="lazy" decoding="async">' % (dish_id, esc(name)))
+        cls = "dish" if media else "dish dish--nophoto"
+        out.append("""      <li class="%s">
+        %s
+        <div class="dish__body"><h3>%s</h3></div>
+      </li>""" % (cls, media, esc(name)))
+    return '<ul class="dish-grid">\n%s\n    </ul>' % "\n".join(out)
 
-    name = item["name"]
-    # Package menus don't need the (Vegan)/(GF) suffix — the section says it.
-    name = re.sub(r"\s*\((?:Vegan|GF)\)$", "", name)
-
-    if item.get("id"):
-        media = ('<div class="dish__img"><img src="/assets/img/dishes/%s.jpg" alt="%s" '
-                 'width="574" height="574" loading="lazy" decoding="async"></div>'
-                 % (item["id"], name.replace('"', "&quot;")))
-    else:
-        media = ('<div class="dish__img" style="display:grid;place-items:center;'
-                 'background:var(--ink);color:#fff;font-family:var(--font-head);'
-                 'font-weight:700;font-size:1.6rem" aria-hidden="true">ARI</div>')
-
-    return """        <li class="dish">
-          %s
-          <div class="dish__body">
-            <span class="dish__name">%s</span>
-            <span class="dish__tags">%s</span>
-          </div>
-        </li>""" % (media, name, "".join(tags))
-
-
-def menu_sections():
-    nav, blocks = [], []
-    for anchor, title, slugs, note, exclude in MENU_SECTIONS:
-        missing = [s for s in slugs if s not in BY_SLUG]
-        if missing:
-            raise KeyError("unknown menu-data slug(s) %s in section %r - known: %s"
-                           % (missing, anchor, sorted(BY_SLUG)))
-        items = []
-        for slug in slugs:
-            items += [i for i in BY_SLUG[slug]["items"] if i["name"] not in SKIP_ITEMS]
-        if exclude:
-            items = [i for i in items if i["name"] not in exclude]
-        nav.append('<a href="#%s">%s</a>' % (anchor, title))
-        tiles = "\n".join(dish_tile(i, slugs[0]) for i in items)
-        blocks.append("""    <section class="menu-cat" id="%s">
-      <div class="menu-cat__head">
-        <h2>%s</h2>
-        <p class="menu-cat__note">%d dishes</p>
-      </div>
-      <p class="lede" style="margin-bottom:1.5rem">%s</p>
-      <ul class="dishes">
-%s
-      </ul>
-    </section>""" % (anchor, title, len(items), note, tiles))
-    return '<nav class="menu-nav" aria-label="Menu sections">%s</nav>' % "".join(nav), "\n".join(blocks)
-
-
-# --------------------------------------------------------------------------
-# Pages
-# --------------------------------------------------------------------------
 
 def build_home():
     usecases = [
-        ("Office &amp; working lunches", "Hot mains, rice and salad delivered to the floor. Ready to serve the minute it lands.", "/assets/img/dishes/A2SZJ3QZ7KC3M.jpg"),
-        ("Board &amp; client meetings", "Something better than sandwiches when it matters. Plated up or served buffet-style.", "/assets/img/brand/menu-hero.jpg"),
-        ("Staff celebrations", "End-of-year, birthdays, farewells. A full Thai banquet that gets people out of their chairs.", "/assets/img/brand/entree-tile.jpg"),
-        ("Conferences &amp; all-day events", "Rolling catering across a full day, with grazing boards and Thai iced tea between sessions.", "/assets/img/brand/stir-fry-tile.jpg"),
+        ("Office &amp; working lunches", "Hot Thai rice meals delivered to the floor, individually packed or shared across the table.", "/assets/img/dishes/A2SZJ3QZ7KC3M.jpg"),
+        ("Meetings &amp; corporate functions", "Something better than sandwiches when it matters. Delivered about 30 minutes before you start.", "/assets/img/brand/menu-hero.jpg"),
+        ("Christmas &amp; end-of-year", "Staff parties and end-of-year celebrations, catered from our Adelaide St kitchen.", "/assets/img/brand/entree-tile.jpg"),
+        ("Weddings &amp; private events", "Small weddings and private events. Tell us what you have in mind and we will work the menu around it.", "/assets/img/brand/stir-fry-tile.jpg"),
     ]
     cards = "\n".join(
         """      <a class="usecase" href="/packages/" style="background-image:url('%s')">
@@ -548,21 +501,21 @@ def build_home():
     body = """<section class="hero hero--split">
   <div class="container hero-grid">
     <div class="hero__inner">
-      <span class="eyebrow">Corporate &amp; office catering &middot; Brisbane</span>
-      <h1>Real Thai street food, <span class="accent">delivered to your office.</span></h1>
-      <p class="hero__lede">Ari brings Brisbane&rsquo;s favourite Thai street food to your desks, boardrooms and staff events &mdash; cooked fresh, delivered hot, ready to serve. Packages from $24 per person.</p>
+      <span class="eyebrow">Thai catering &middot; Brisbane</span>
+      <h1>Thai catering in Brisbane, <span class="accent">delivered hot.</span></h1>
+      <p class="hero__lede">Ari &ndash; Thai Street Food caters office lunches, meetings, Christmas parties, weddings and private events across Brisbane. Cooked fresh in our Adelaide St kitchen, from ${FROM} per person plus GST.</p>
       <div class="btn-row">
         <a class="btn btn--primary" href="/enquiry/">Get a quote</a>
-        <a class="btn btn--ghost on-light" href="/packages/">See packages &amp; pricing</a>
+        <a class="btn btn--ghost on-light" href="/packages/">Prices &amp; packages</a>
       </div>
       <ul class="hero__points">
-        <li>{CHECK} Delivered hot across Brisbane CBD and inner suburbs</li>
-        <li>{CHECK} Vegan and gluten-free options in every package, no surcharge</li>
-        <li>{CHECK} Menu and fixed quote back within one business day</li>
+        <li>{CHECK} Free delivery within 5&nbsp;km of the Brisbane CBD for 10 or more</li>
+        <li>{CHECK} Vegan, vegetarian and gluten-free choices available</li>
+        <li>{CHECK} Individually packed, or shared-style for the group</li>
       </ul>
     </div>
     <div class="hero-media">
-      <img src="/assets/img/brand/pad-kra-pow-hero.jpg" alt="Pad Kra Pow with a fried egg and jasmine rice" width="1213" height="1349" loading="eager" fetchpriority="high">
+      <img src="/assets/img/brand/pad-kra-pow-hero.jpg" alt="Pad Kra Pao with a fried egg and jasmine rice, cooked for Ari Thai catering in Brisbane" width="1213" height="1349" loading="eager" fetchpriority="high">
     </div>
   </div>
 </section>
@@ -570,9 +523,9 @@ def build_home():
 <section class="trust">
   <div class="container trust__inner">
     <div class="trust__item">{CHEF} Cooked fresh in our Adelaide St kitchen</div>
-    <div class="trust__item">{LEAF} Vegan &amp; gluten-free options</div>
-    <div class="trust__item">{CLOCK} 24 hours&rsquo; notice, minimum 10 guests</div>
-    <div class="trust__item">{DOC} Tax invoice and PO friendly</div>
+    <div class="trust__item">{LEAF} Vegan, vegetarian &amp; gluten-free choices</div>
+    <div class="trust__item">{CLOCK} {NOTICE} hours&rsquo; notice, minimum {MIN} people</div>
+    <div class="trust__item">{DOC} Tax invoice for your finance team</div>
   </div>
 </section>
 
@@ -580,8 +533,8 @@ def build_home():
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">What we cater</span>
-      <h2>Built for the way offices actually eat</h2>
-      <p class="lede">Everything is designed to travel well and hold heat &mdash; so what arrives at 12.15 still tastes like it came straight off the wok.</p>
+      <h2>Catering for offices, parties and private events</h2>
+      <p class="lede">Thai rice meals that travel well and hold their heat &mdash; so what arrives at 12.15 still tastes like it came straight off the wok.</p>
     </div>
     <div class="grid grid--4">
 {CARDS}
@@ -592,51 +545,45 @@ def build_home():
 <section class="section section--cream">
   <div class="container">
     <div class="section-head section-head--center">
-      <span class="eyebrow">Packages &amp; pricing</span>
-      <h2>Straightforward pricing, per person</h2>
-      <p class="lede">One price per head covers the food, the serving gear and delivery into Brisbane CBD. No hidden extras on the invoice.</p>
+      <span class="eyebrow">Prices</span>
+      <h2>Three packages, priced per person</h2>
+      <p class="lede">Choose food only, add dessert, or add dessert and a drink. Prices are per person and exclude GST.</p>
     </div>
     {PACKAGES}
-    <p class="text-center" style="margin-top:2rem">
-      <a class="btn btn--dark" href="/packages/">See what&rsquo;s in each package</a>
+    <p class="text-center" style="margin-top:2rem;color:var(--muted);font-size:0.92rem">
+      Minimum {MIN} people &middot; {NOTICE} hours&rsquo; notice &middot; Free delivery within 5&nbsp;km of the Brisbane CBD
     </p>
   </div>
 </section>
 
-<section class="section section--cream">
+<section class="section">
   <div class="container">
     <div class="section-head">
       <span class="eyebrow">How it works</span>
-      <h2>Three steps, one business day</h2>
+      <h2>From email to lunch</h2>
     </div>
     <ol class="steps">
-      <li>
-        <h3>Send us the brief</h3>
-        <p>Date, headcount, delivery address and any dietary requirements. Two minutes on the quote form.</p>
-      </li>
-      <li>
-        <h3>We send a menu and a fixed quote</h3>
-        <p>Back within one business day with a menu built around your group and an all-inclusive price. Adjust it as much as you like.</p>
-      </li>
-      <li>
-        <h3>We deliver hot and set up</h3>
-        <p>We arrive ahead of your start time, set the buffet, label the dietary dishes and get out of your way.</p>
-      </li>
+      <li><h3>Email us the details</h3><p>Date, numbers, delivery address and any dietary requirements.</p></li>
+      <li><h3>We confirm and invoice</h3><p>A 25% deposit confirms the order. Credit card payment is available.</p></li>
+      <li><h3>We deliver, ready to serve</h3><p>About 30 minutes before you start, to reception or wherever you nominate.</p></li>
     </ol>
   </div>
 </section>
 
-<section class="section">
-  <div class="container split">
-    <div class="split__media">
-      <img src="/assets/img/dishes/CMR66B7SJJ77T.jpg" alt="Vegan Pad Ka Praw with rice" width="574" height="574" loading="lazy">
-    </div>
-    <div>
-      <span class="eyebrow">Dietary requirements</span>
-      <h2>Nobody eats a sad side salad</h2>
-      <p>Thai food is genuinely good at this. Our vegan and gluten-free dishes are the same dishes &mdash; same wok, same flavour &mdash; not an afterthought plated separately.</p>
-      {DIET}
-      <a class="btn btn--dark" href="/menu/">Browse the catering menu</a>
+<section class="section section--cream section--tight">
+  <div class="container">
+    <div class="split split--top">
+      <div>
+        <span class="eyebrow">Dietary requirements</span>
+        <h2>Vegan, vegetarian and gluten-free</h2>
+        {DIET}
+        <p style="margin-top:1rem;color:var(--muted);font-size:0.95rem">{CROSS} Please confirm any allergies and dietary requirements with our staff when you order.</p>
+      </div>
+      <div>
+        <span class="eyebrow">Included with every order</span>
+        <h2>What you always get</h2>
+        {INCLUDED}
+      </div>
     </div>
   </div>
 </section>
@@ -651,12 +598,17 @@ def build_home():
         .replace("{GALLERY}", gallery_section()) \
         .replace("{REVIEWS}", reviews_block()) \
         .replace("{CTA}", CTA_BAND) \
+        .replace("{FROM}", LOW_PRICE) \
+        .replace("{MIN}", str(ORDERING["minimum_people"])) \
+        .replace("{NOTICE}", str(ORDERING["notice_hours"])) \
+        .replace("{CROSS}", esc(DIETARY["cross_contamination"])) \
         .replace("{DIET}", ticks([
-            "10 vegan mains and 12 gluten-free mains to choose from",
-            "No surcharge for dietary versions of a dish",
-            "Every dietary dish is labelled and served separately on delivery",
-            "Tell us the numbers and we portion for them &mdash; no one misses out",
+            "Vegan, vegetarian and gluten-free choices available",
+            "Tell us your requirements when you order and we build the order around them",
+            "Ingredient information available for any dish",
+            "Menu choices can be mixed within one order",
         ])) \
+        .replace("{INCLUDED}", ticks(ALWAYS_INCLUDED)) \
         .replace("{CHECK}", ICON["check"]) \
         .replace("{CHEF}", ICON["chef"]) \
         .replace("{LEAF}", ICON["leaf"]) \
@@ -664,16 +616,12 @@ def build_home():
         .replace("{DOC}", ICON["doc"])
 
     write("/index.html", page(
-        "/", "Thai Catering Brisbane | Office &amp; Corporate Catering | " + NAME,
-        "Thai street food catering for Brisbane offices, meetings and staff events. Packages from $24 per person, vegan and gluten-free included, delivered hot and ready to serve.",
+        "/", "Thai Catering Brisbane | Office, Party &amp; Event Catering",
+        "Thai catering in Brisbane from $19.99 per person plus GST. Office lunches, meetings, Christmas parties, weddings and private events. Free CBD delivery.",
         body, "/", schema=True))
 
 
 def build_packages():
-    addon_html = "\n".join(
-        '      <li><span class="addons__name">%s</span><span class="addons__price">%s</span></li>' % (n, p)
-        for n, p in ADDONS)
-
     faq_html = "\n".join(
         """      <details>
         <summary>%s</summary>
@@ -683,12 +631,12 @@ def build_packages():
     body = """<section class="hero hero--page hero--photo" style="background-image:url('/assets/img/brand/menu-hero.jpg')">
   <div class="container">
     <div class="hero__inner">
-      <span class="eyebrow">Packages &amp; pricing</span>
-      <h1>One price per head. <span class="accent">Everything included.</span></h1>
-      <p class="hero__lede">Food, serving equipment and delivery into Brisbane CBD are all in the per-person price. Pick a package, then we&rsquo;ll build the menu around your group.</p>
+      <span class="eyebrow">Prices &amp; packages</span>
+      <h1>Catering prices, <span class="accent">per person.</span></h1>
+      <p class="hero__lede">Three packages, from ${FROM} per person plus GST. Minimum {MIN} people, {NOTICE} hours&rsquo; notice, free delivery within 5&nbsp;km of the Brisbane CBD.</p>
       <div class="btn-row">
         <a class="btn btn--primary" href="/enquiry/">Get a quote</a>
-        <a class="btn btn--ghost" href="/menu/">See the catering menu</a>
+        <a class="btn btn--ghost" href="/menu/">See what we cook</a>
       </div>
     </div>
   </div>
@@ -698,7 +646,7 @@ def build_packages():
   <div class="container">
     {PACKAGES}
     <p class="text-center" style="margin-top:2rem;color:var(--muted);font-size:0.92rem">
-      Prices are per person, include GST, and cover delivery into Brisbane CBD and inner suburbs.
+      Prices are per person and are <strong>exclusive of GST</strong>. Depending on the package, guests have one or two food choices.
     </p>
   </div>
 </section>
@@ -707,40 +655,38 @@ def build_packages():
   <div class="container">
     <div class="split split--top">
       <div>
-        <span class="eyebrow">In every package</span>
-        <h2>What you always get</h2>
+        <span class="eyebrow">Included</span>
+        <h2>With every order</h2>
         {INCLUDED}
       </div>
       <div>
-        <span class="eyebrow">Optional extras</span>
-        <h2>Add-ons</h2>
-        <ul class="addons">
-{ADDONS}
-        </ul>
+        <span class="eyebrow">Delivery &amp; pick-up</span>
+        <h2>Getting it to you</h2>
+        {DELIVERY}
       </div>
     </div>
-  </div>
-</section>
-
-<section class="section section--cream">
-  <div class="container">
-    <div class="section-head">
-      <span class="eyebrow">How it works</span>
-      <h2>From brief to buffet</h2>
-    </div>
-    <ol class="steps">
-      <li><h3>Send us the brief</h3><p>Date, headcount, address and dietary requirements.</p></li>
-      <li><h3>We send a menu and a fixed quote</h3><p>Within one business day. Change as much as you like before you confirm.</p></li>
-      <li><h3>We deliver hot and set up</h3><p>Ahead of your start time, buffet set, dietary dishes labelled.</p></li>
-    </ol>
   </div>
 </section>
 
 <section class="section">
   <div class="container">
     <div class="section-head">
+      <span class="eyebrow">Ordering</span>
+      <h2>How to order and pay</h2>
+    </div>
+    <ol class="steps">
+      <li><h3>Email your brief</h3><p>Date, numbers, address, package and any dietary requirements to <a href="mailto:{EMAIL}">{EMAIL}</a>.</p></li>
+      <li><h3>We confirm and invoice</h3><p>A minimum 25% deposit confirms the order. Credit card payment is available, and we can invoice a business.</p></li>
+      <li><h3>Changes and cancellations</h3><p>Changes can be made up to 24 hours before. Cancellations are not refunded &mdash; the amount paid becomes credit towards a future order.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="section section--cream">
+  <div class="container">
+    <div class="section-head">
       <span class="eyebrow">Good to know</span>
-      <h2>Questions we get asked</h2>
+      <h2>Catering questions we get asked</h2>
     </div>
     <div class="faq">
 {FAQS}
@@ -750,28 +696,38 @@ def build_packages():
 
 {CTA}""" \
         .replace("{PACKAGES}", package_cards()) \
-        .replace("{ADDONS}", addon_html) \
         .replace("{FAQS}", faq_html) \
         .replace("{CTA}", CTA_BAND) \
-        .replace("{INCLUDED}", ticks(ALWAYS_INCLUDED))
+        .replace("{FROM}", LOW_PRICE) \
+        .replace("{MIN}", str(ORDERING["minimum_people"])) \
+        .replace("{NOTICE}", str(ORDERING["notice_hours"])) \
+        .replace("{EMAIL}", EMAIL) \
+        .replace("{INCLUDED}", ticks(ALWAYS_INCLUDED)) \
+        .replace("{DELIVERY}", ticks([
+            "Delivery available %s" % esc(DELIVERY["hours"]),
+            "Free within 5&nbsp;km of the Brisbane CBD for 10 or more",
+            "Outside that area, delivery starts from $15 and varies with distance",
+            "Delivered about 30 minutes before your event starts",
+            "To reception, a meeting room or another nominated point",
+            "Pick-up available from the restaurant in Brisbane City",
+        ]))
 
     write("/packages/index.html", page(
-        "/packages/", "Catering Packages &amp; Pricing | " + NAME,
-        "Thai catering packages for Brisbane offices from $24 per person. See what is included in Street Lunch, Ari Banquet and Street Feast, plus add-ons and delivery.",
-        body, "/packages/", og_image="/assets/img/brand/menu-hero.jpg"))
+        "/packages/", "Thai Catering Prices Brisbane | From $19.99 per person",
+        "Thai catering prices in Brisbane: $19.99 food only, $26.99 with dessert, $32.99 with dessert and a drink &mdash; per person plus GST, minimum 10 people.",
+        body, "/packages/", og_image="/assets/img/brand/menu-hero.jpg", faq=True))
 
 
 def build_menu():
-    nav, blocks = menu_sections()
     body = """<section class="hero hero--page hero--photo" style="background-image:url('/assets/img/brand/stir-fry-tile.jpg')">
   <div class="container">
     <div class="hero__inner">
       <span class="eyebrow">Catering menu</span>
-      <h1>Pick your dishes. <span class="accent">We&rsquo;ll do the rest.</span></h1>
-      <p class="hero__lede">The full range we cater from &mdash; the same dishes we cook at the restaurant, portioned for a room. Dishes are chosen by package rather than priced individually.</p>
+      <h1>Thai rice meals, <span class="accent">cooked to order.</span></h1>
+      <p class="hero__lede">Our catering is built around Thai rice meals. Depending on the package you choose, guests have one or two food choices, and you can mix choices across the group.</p>
       <div class="btn-row">
         <a class="btn btn--primary" href="/enquiry/">Get a quote</a>
-        <a class="btn btn--ghost" href="/packages/">See packages &amp; pricing</a>
+        <a class="btn btn--ghost" href="/packages/">Prices &amp; packages</a>
       </div>
     </div>
   </div>
@@ -779,21 +735,57 @@ def build_menu():
 
 <section class="section">
   <div class="container">
-    {NAV}
-{BLOCKS}
-    <p style="color:var(--muted);font-size:0.92rem;max-width:62ch">
-      Menu subject to seasonal availability. Our kitchen handles nuts, shellfish, gluten, soy and sesame &mdash;
-      tell us about allergies on the <a href="/enquiry/" style="color:var(--red);font-weight:700">enquiry form</a> and we&rsquo;ll work around them,
-      but we can&rsquo;t guarantee a dish is free of traces.
-    </p>
+    <div class="section-head">
+      <span class="eyebrow">Popular choices</span>
+      <h2>What people order for catering</h2>
+      <p class="lede">{AVAIL} Tell us what your group likes and we will put the options together.</p>
+    </div>
+    {DISHES}
   </div>
 </section>
 
-{CTA}""".replace("{NAV}", nav).replace("{BLOCKS}", blocks).replace("{CTA}", CTA_BAND)
+<section class="section section--cream section--tight">
+  <div class="container">
+    <div class="split split--top">
+      <div>
+        <span class="eyebrow">How it is served</span>
+        <h2>Individually packed, or shared</h2>
+        {SERVING}
+      </div>
+      <div>
+        <span class="eyebrow">Dietary</span>
+        <h2>Vegan, vegetarian &amp; gluten-free</h2>
+        {DIET}
+        <p style="margin-top:1rem;color:var(--muted);font-size:0.95rem">{CROSS} Please confirm any allergies and dietary requirements with our staff when you order.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{GALLERY}
+
+{CTA}""" \
+        .replace("{DISHES}", dish_cards()) \
+        .replace("{GALLERY}", gallery_section()) \
+        .replace("{CTA}", CTA_BAND) \
+        .replace("{AVAIL}", esc(FOOD["availability_note"])) \
+        .replace("{CROSS}", esc(DIETARY["cross_contamination"])) \
+        .replace("{SERVING}", ticks([
+            "Individually packed meals, one per guest",
+            "Or shared-style catering for the table",
+            "Menu choices can be mixed within one order",
+            "A fried egg can be added where available",
+            "Dessert and a drink come with the matching package",
+        ])) \
+        .replace("{DIET}", ticks([
+            "Vegan, vegetarian and gluten-free choices available",
+            "Tell us your requirements when you order",
+            "Ingredient information available for any dish",
+        ]))
 
     write("/menu/index.html", page(
-        "/menu/", "Thai Catering Menu | " + NAME,
-        "The full Ari catering menu: Thai mains and stir-fries, entrees and skewers, vegan and gluten-free dishes and Thai iced teas for Brisbane offices and events.",
+        "/menu/", "Thai Catering Menu Brisbane | Rice Meals &amp; Curries",
+        "The Ari Thai catering menu: Massaman chicken, green curry, Pad Kra Pao, fried rice and Tom Yum fried rice. Vegan, vegetarian and gluten-free choices.",
         body, "/menu/", og_image="/assets/img/brand/stir-fry-tile.jpg"))
 
 
@@ -861,7 +853,7 @@ def build_about():
       <div class="card">
         <div class="card__icon">{FLAME}</div>
         <h3>Cooked to order, not held</h3>
-        <p>We cook to your delivery time, not the night before. Chafing dishes and insulated carriers keep it hot until you serve.</p>
+        <p>We cook to your delivery time, not the night before, and aim to arrive about 30 minutes before you start so it is hot when you serve it.</p>
       </div>
     </div>
   </div>
@@ -878,7 +870,7 @@ def build_about():
       <div class="aside-card">
         <ul class="contact-list">
           <li>{PIN} <span>{ADDRESS}</span></li>
-          <li>{CLOCK} <span>Mon&ndash;Fri 9.00am&ndash;8.00pm<br>Sat&ndash;Sun 10.00am&ndash;6.00pm</span></li>
+          <li>{CLOCK} <span>Mon&ndash;Fri 9.00am&ndash;8.00pm<br>Sat 10.00am&ndash;9.00pm &middot; Sun 10.00am&ndash;6.00pm</span></li>
           <li>{PHONE_ICON} <a href="tel:{PHONE_HREF}">{PHONE}</a></li>
           <li>{MAIL} <a href="mailto:{EMAIL}">{EMAIL}</a></li>
         </ul>
@@ -907,7 +899,7 @@ def build_enquiry():
     <div class="hero__inner">
       <span class="eyebrow">Get a quote</span>
       <h1>Tell us about your event</h1>
-      <p class="hero__lede">Two minutes now, a menu and a fixed quote back within one business day. No obligation, no sales calls.</p>
+      <p class="hero__lede">Two minutes now, and we&rsquo;ll come back to you by email with the options. No obligation, no sales calls.</p>
     </div>
   </div>
 </section>
@@ -939,7 +931,8 @@ def build_enquiry():
                 <label class="choice"><input type="radio" name="Event type" value="Office or working lunch" required><span>Office or working lunch</span></label>
                 <label class="choice"><input type="radio" name="Event type" value="Board or client meeting"><span>Board or client meeting</span></label>
                 <label class="choice"><input type="radio" name="Event type" value="Staff celebration"><span>Staff celebration</span></label>
-                <label class="choice"><input type="radio" name="Event type" value="Conference or all-day event"><span>Conference or all-day event</span></label>
+                <label class="choice"><input type="radio" name="Event type" value="Christmas or end-of-year party"><span>Christmas or end-of-year party</span></label>
+                <label class="choice"><input type="radio" name="Event type" value="Wedding or private event"><span>Wedding or private event</span></label>
                 <label class="choice"><input type="radio" name="Event type" value="Something else"><span>Something else</span></label>
               </div>
             </div>
@@ -984,9 +977,9 @@ def build_enquiry():
             <div class="field">
               <span class="label">Which package looks closest?</span>
               <div class="choices">
-                <label class="choice"><input type="radio" name="Package" value="Street Lunch - from $24pp"><span>Street Lunch &mdash; from $24pp</span></label>
-                <label class="choice"><input type="radio" name="Package" value="Ari Banquet - from $34pp"><span>Ari Banquet &mdash; from $34pp</span></label>
-                <label class="choice"><input type="radio" name="Package" value="Street Feast - from $46pp"><span>Street Feast &mdash; from $46pp</span></label>
+                <label class="choice"><input type="radio" name="Package" value="Food only - $19.99pp plus GST"><span>Food only &mdash; $19.99pp plus GST</span></label>
+                <label class="choice"><input type="radio" name="Package" value="Food and dessert - $26.99pp plus GST"><span>Food and dessert &mdash; $26.99pp plus GST</span></label>
+                <label class="choice"><input type="radio" name="Package" value="Food, dessert and a drink - $32.99pp plus GST"><span>Food, dessert and a drink &mdash; $32.99pp plus GST</span></label>
                 <label class="choice"><input type="radio" name="Package" value="Not sure yet - recommend something"><span>Not sure &mdash; recommend something</span></label>
               </div>
             </div>
@@ -1024,7 +1017,7 @@ def build_enquiry():
 
           <fieldset class="fieldset">
             <legend>Your details</legend>
-            <p class="fieldset__hint">Last step. We&rsquo;ll reply within one business day.</p>
+            <p class="fieldset__hint">Last step. We&rsquo;ll reply by email.</p>
 
             <div class="field-row">
               <div class="field">
@@ -1105,7 +1098,7 @@ def build_enquiry():
 
     write("/enquiry/index.html", page(
         "/enquiry/", "Get a Catering Quote | " + NAME,
-        "Request a Thai catering quote for your Brisbane office or event. Tell us the date, headcount and dietary needs and we will send a menu and fixed price within one business day.",
+        "Request Thai catering for your Brisbane office, party or event. Tell us the date, numbers and any dietary requirements and we&rsquo;ll email you the options. From $19.99 per person plus GST.",
         body, "/enquiry/", og_image="/assets/img/brand/menu-hero.jpg"))
 
 
@@ -1114,7 +1107,7 @@ def build_thanks():
   <div class="container" style="max-width:44rem">
     <span class="eyebrow">Enquiry sent</span>
     <h1>Thanks &mdash; we&rsquo;ve got it.</h1>
-    <p class="lede" style="margin-inline:auto">We&rsquo;ll come back to you with a menu and a fixed quote within one business day. If your event is sooner than that, give us a call and we&rsquo;ll sort it now.</p>
+    <p class="lede" style="margin-inline:auto">We&rsquo;ll come back to you by email with the options. If your event is soon, give us a call and we&rsquo;ll sort it now.</p>
     <div class="btn-row" style="justify-content:center;margin-top:1.5rem">
       <a class="btn btn--dark" href="tel:{PHONE_HREF}">Call {PHONE}</a>
       <a class="btn btn--ghost on-light" href="/menu/">Browse the menu</a>
@@ -1124,7 +1117,7 @@ def build_thanks():
 
     write("/enquiry/thank-you/index.html", page(
         "/enquiry/thank-you/", "Thanks for your enquiry | " + NAME,
-        "Your catering enquiry has been sent. We reply within one business day.",
+        "Your catering enquiry has been sent. We&rsquo;ll reply by email.",
         body, "/enquiry/"))
 
 
@@ -1192,36 +1185,32 @@ def build_terms():
   {NOTE}
   <p><strong>Last updated:</strong> {YEAR}</p>
 
-  <h2>Quotes</h2>
-  <p>Quotes are valid for 14 days and are based on the guest numbers, menu and delivery details you give us. Prices shown on this website are indicative starting prices per person and include GST. Your quote is the price that applies.</p>
+  <h2>Quotes and prices</h2>
+  <p>Prices shown on this website are per person and are <strong>exclusive of GST</strong>. A quote is based on the numbers, menu and delivery details you give us, and the quote is the price that applies.</p>
 
-  <h2>Confirming a booking</h2>
-  <p>A booking is confirmed when you accept the quote in writing. For orders over $500 we ask for a 50% deposit to hold the date, with the balance due on the day of the event unless we&rsquo;ve agreed account terms with you.</p>
+  <h2>Confirming an order</h2>
+  <p>Orders are placed by email. We confirm the order and issue an invoice. A minimum 25% deposit is required to confirm a catering order. Credit card payment is available, and we can invoice a business.</p>
 
   <h2>Notice and minimums</h2>
   <ul>
-    <li>Minimum 10 guests.</li>
-    <li>24 hours&rsquo; notice for the Street Lunch package; 48 hours for Ari Banquet and Street Feast.</li>
-    <li>Final guest numbers are due 48 hours before delivery. That number is what we cook and invoice for. We&rsquo;ll do our best to accommodate small increases after that.</li>
+    <li>Minimum 10 people.</li>
+    <li>At least 48 hours&rsquo; notice.</li>
+    <li>We cater for groups of approximately 40 to 50 people. For larger or more complex events, email us and we will discuss the options with you.</li>
   </ul>
 
   <h2>Changes and cancellations</h2>
   <ul>
-    <li>Cancel more than 48 hours before delivery and any deposit is refunded in full.</li>
-    <li>Cancel within 48 hours and the deposit is retained to cover ingredients and prep already committed.</li>
-    <li>Cancel within 24 hours and the full quoted amount is payable.</li>
-    <li>Menu changes are free up to 48 hours before delivery.</li>
+    <li>Changes can be made up to 24 hours before the scheduled order.</li>
+    <li>Cancellations are non-refundable. The amount paid will be provided as credit towards a future order, subject to these terms.</li>
   </ul>
 
-  <h2>Delivery</h2>
-  <p>Delivery into Brisbane CBD and inner suburbs is included in the per-person price. Deliveries further out are quoted separately. Please make sure we have accurate access details &mdash; loading dock, lift or security codes, and a contact on site. If we can&rsquo;t deliver because access wasn&rsquo;t available, the order is still payable.</p>
+  <h2>Delivery and pick-up</h2>
+  <p>Catering delivery is available from 9.00am to 6.00pm. Delivery is free within 5&nbsp;km of the Brisbane CBD for orders of 10 people or more. Outside that area, delivery can be arranged and fees start from $15, varying with distance and order size.</p>
+  <p>Tell us what time your event starts and we aim to deliver about 30 minutes beforehand. We deliver to an agreed point such as reception or a meeting room, subject to building access. Please make sure we have accurate access details and a contact on site. Pick-up from the restaurant in Brisbane City is also available.</p>
 
   <h2>Food safety and allergens</h2>
   <p>Food is prepared to be served within two hours of delivery. Once we hand it over, responsibility for safe handling and storage passes to you, and we can&rsquo;t accept responsibility for food consumed outside that window.</p>
-  <p>We take allergies seriously and will build your menu around the requirements you give us. However, our kitchen handles nuts, shellfish, gluten, soy, sesame, egg and dairy, so we cannot guarantee any dish is free from traces of an allergen. Please tell us about allergies at the time of booking, not on the day.</p>
-
-  <h2>Equipment</h2>
-  <p>Chafing dishes, platters and serving equipment remain our property. We&rsquo;ll arrange collection after your event. Replacement cost applies to items that are damaged or not returned.</p>
+  <p>We can provide ingredient information for menu items so you can check anything relevant to your allergies or dietary needs. Our kitchen prepares all dishes in one place using shared equipment, so we cannot guarantee that any dish is free of traces of an allergen. Please tell us about any allergies when you order, and confirm them with our staff &mdash; not on the day of delivery.</p>
 
   <h2>Payment</h2>
   <p>We invoice with an ABN and can include your purchase order number. Invoices are payable within 7 days unless we&rsquo;ve agreed otherwise in writing.</p>
@@ -1257,8 +1246,14 @@ def build_404():
 
 
 def build_meta():
-    paths = ["/", "/packages/", "/menu/", "/about/", "/enquiry/", "/privacy-policy/", "/terms-conditions/"]
-    urls = "\n".join("  <url><loc>https://%s%s</loc></url>" % (DOMAIN, p) for p in paths)
+    # priority is a hint, not a ranking factor, but lastmod genuinely helps a
+    # crawler decide what to re-fetch after a rewrite like this one.
+    today = datetime.date.today().isoformat()
+    paths = [("/", "1.0"), ("/packages/", "0.9"), ("/menu/", "0.8"), ("/enquiry/", "0.8"),
+             ("/about/", "0.5"), ("/privacy-policy/", "0.2"), ("/terms-conditions/", "0.2")]
+    urls = "\n".join(
+        "  <url><loc>https://%s%s</loc><lastmod>%s</lastmod><priority>%s</priority></url>"
+        % (DOMAIN, path, today, pri) for path, pri in paths)
     write("/sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n'
                           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n%s\n</urlset>\n' % urls)
     write("/robots.txt", "User-agent: *\nAllow: /\n\nSitemap: https://%s/sitemap.xml\n" % DOMAIN)

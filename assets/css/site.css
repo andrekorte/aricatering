@@ -675,3 +675,24 @@ a  { color: inherit; }
   body.chat-open .chat-launcher { display: none; }
   body.chat-open { overflow: hidden; }
 }
+
+/* ---------- Catering dishes ------------------------------------------- */
+/* Replaces the old 56-dish menu grid: catering is a short list of rice
+   meals, and two of them have no photograph in the restaurant's data -
+   .dish--nophoto is a card rather than a mislabelled picture. */
+
+.dish-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: clamp(0.8rem, 2vw, 1.25rem);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+}
+.dish {
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+  display: flex; flex-direction: column;
+}
+.dish img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+.dish__body { padding: 0.85rem 1rem 1rem; }
+.dish__body h3 { font-size: 1.05rem; margin: 0; }
+.dish--nophoto { justify-content: center; min-height: 128px; background: var(--cream); }
+.dish--nophoto .dish__body { padding: 1.4rem 1rem; }
